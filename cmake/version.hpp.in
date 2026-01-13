@@ -1,0 +1,203 @@
+#pragma once
+
+// __cpp_lib_xxx
+#include <version>
+// std::unreachable()
+#include <utility>
+
+// As of C++20, the header <version> was added for this purpose
+// In old or nonconforming compilers, using the alternative operator representations may still require including this header :)
+#if __has_include(<ciso646>)
+#include <ciso646>
+#endif
+
+// =========================================================
+// VERSION
+// =========================================================
+
+#define BPP_MAJOR_VERSION @BPP_MAJOR_VERSION@
+#define BPP_MINOR_VERSION @BPP_MINOR_VERSION@
+#define BPP_PATCH_VERSION @BPP_PATCH_VERSION@
+#define BPP_VERSION "@BPP_VERSION@"
+
+#define BPP_VERSION_STRING \
+    "@PROJECT_NAME@ v" BPP_VERSION \
+    " (" BPP_GIT_COMMIT_INFO_SHORT ")"
+
+// =========================================================
+// PLATFORM
+// =========================================================
+
+#define @BPP_PLATFORM_NAME@
+
+// =========================================================
+// ARCHITECTURE
+// =========================================================
+
+#define @BPP_ARCH_NAME@
+
+// =========================================================
+// COMPILER
+// =========================================================
+
+#define @BPP_COMPILER_NAME@
+
+#if defined(BPP_COMPILER_MSVC)
+
+#if __cpp_lib_unreachable >= 202202L
+#define BPP_COMPILER_UNREACHABLE() std::unreachable()
+#else
+#define BPP_COMPILER_UNREACHABLE() __assume(0)
+#endif
+
+#define BPP_COMPILER_DEBUG_TRAP() __debugbreak()
+#define BPP_COMPILER_IMPORTED_SYMBOL __declspec(dllimport)
+#define BPP_COMPILER_EXPORTED_SYMBOL __declspec(dllexport)
+#define BPP_COMPILER_LOCAL_SYMBOL
+
+#define BPP_COMPILER_DISABLE_WARNING_PUSH __pragma(warning(push))
+#define BPP_COMPILER_DISABLE_WARNING_POP __pragma(warning(pop))
+#define BPP_COMPILER_DISABLE_WARNING(warningNumber) __pragma(warning(disable : warningNumber)) // NOLINT(bugprone-macro-parentheses)
+
+#elif defined(BPP_COMPILER_GNU)
+
+#if __cpp_lib_unreachable >= 202202L
+#define BPP_COMPILER_UNREACHABLE() std::unreachable()
+#else
+#define BPP_COMPILER_UNREACHABLE() __builtin_unreachable()
+#endif
+
+#define BPP_COMPILER_DEBUG_TRAP() __builtin_trap()
+#define BPP_COMPILER_IMPORTED_SYMBOL __attribute__((visibility("default")))
+#define BPP_COMPILER_EXPORTED_SYMBOL __attribute__((visibility("default")))
+#define BPP_COMPILER_LOCAL_SYMBOL __attribute__((visibility("hidden")))
+
+#define BPP_COMPILER_DISABLE_WARNING_PUSH _Pragma("GCC diagnostic push")
+#define BPP_COMPILER_DISABLE_WARNING_POP _Pragma("GCC diagnostic pop")
+
+#define BPP_COMPILER_PRIVATE_DO_PRAGMA(X) _Pragma(#X)
+#define BPP_COMPILER_DISABLE_WARNING(warningName) BPP_COMPILER_PRIVATE_DO_PRAGMA(GCC diagnostic ignored #warningName)
+
+#elif defined(BPP_COMPILER_APPLE_CLANG) or defined(BPP_COMPILER_CLANG_CL) or defined(BPP_COMPILER_CLANG)
+
+#if __cpp_lib_unreachable >= 202202L
+#define BPP_COMPILER_UNREACHABLE() std::unreachable()
+#else
+#define BPP_COMPILER_UNREACHABLE() __builtin_unreachable()
+#endif
+
+#define BPP_COMPILER_DEBUG_TRAP() __builtin_trap()
+#define BPP_COMPILER_IMPORTED_SYMBOL __attribute__((visibility("default")))
+#define BPP_COMPILER_EXPORTED_SYMBOL __attribute__((visibility("default")))
+#define BPP_COMPILER_LOCAL_SYMBOL __attribute__((visibility("hidden")))
+
+#define BPP_COMPILER_DISABLE_WARNING_PUSH _Pragma("clang diagnostic push")
+#define BPP_COMPILER_DISABLE_WARNING_POP _Pragma("clang diagnostic pop")
+
+#define BPP_COMPILER_PRIVATE_DO_PRAGMA(X) _Pragma(#X)
+#define BPP_COMPILER_DISABLE_WARNING(warningName) BPP_COMPILER_PRIVATE_DO_PRAGMA(clang diagnostic ignored #warningName)
+
+#else
+
+#define BPP_COMPILER_UNREACHABLE() std::unreachable()
+#define BPP_COMPILER_DEBUG_TRAP()
+#define BPP_COMPILER_IMPORTED_SYMBOL
+#define BPP_COMPILER_EXPORTED_SYMBOL
+#define BPP_COMPILER_LOCAL_SYMBOL
+
+#define BPP_COMPILER_DISABLE_WARNING_PUSH
+#define BPP_COMPILER_DISABLE_WARNING_POP
+#define BPP_COMPILER_DISABLE_WARNING(warningName)
+
+#endif
+
+#if defined(BPP_COMPILER_MSVC)
+#define BPP_COMPILER_DISABLE_MSVC_WARNING(warningNumber) BPP_COMPILER_DISABLE_WARNING(warningNumber)
+#else
+#define BPP_COMPILER_DISABLE_MSVC_WARNING(warningNumber)
+#endif
+
+#if defined(BPP_COMPILER_GNU)
+#define BPP_COMPILER_DISABLE_GNU_WARNING(warningName) BPP_COMPILER_DISABLE_WARNING(warningName)
+#else
+#define BPP_COMPILER_DISABLE_GNU_WARNING(warningName)
+#endif
+
+#if defined(BPP_COMPILER_APPLE_CLANG) or defined(BPP_COMPILER_CLANG_CL) or defined(BPP_COMPILER_CLANG)
+#define BPP_COMPILER_DISABLE_CLANG_WARNING(warningName) BPP_COMPILER_DISABLE_WARNING(warningName)
+#else
+#define BPP_COMPILER_DISABLE_CLANG_WARNING(warningName)
+#endif
+
+#if defined(BPP_COMPILER_MSVC)
+#define BPP_COMPILER_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#elif defined(BPP_COMPILER_CLANG_CL)
+#if __clang_major__ >= 18
+// https://github.com/llvm/llvm-project/pull/65675
+// https://github.com/llvm/llvm-project/pull/67199
+#define BPP_COMPILER_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#else
+#define BPP_COMPILER_NO_UNIQUE_ADDRESS
+#endif
+#else
+#define BPP_COMPILER_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#endif
+
+#if defined(BPP_COMPILER_APPLE_CLANG) or defined(BPP_COMPILER_CLANG_CL) or defined(BPP_COMPILER_CLANG)
+#define BPP_COMPILER_NO_DESTROY [[clang::no_destroy]]
+#else
+#define BPP_COMPILER_NO_DESTROY
+#endif
+
+#if defined(BPP_COMPILER_MSVC)
+#define BPP_COMPILER_EMPTY_BASE __declspec(empty_bases)
+#else
+#define BPP_COMPILER_EMPTY_BASE
+#endif
+
+// =========================================================
+// BUILD TYPE
+// =========================================================
+
+#define BPP_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
+
+#if defined(NDEBUG) or defined(_NDEBUG)
+#define BPP_COMPILER_DEBUG 0
+#else
+#define BPP_COMPILER_DEBUG 1
+#endif
+
+#if not defined(BPP_ASSERT)
+#include <cassert>
+#define BPP_ASSERT assert
+#endif
+
+#if not defined(BPP_VALIDATE)
+#if BPP_DEBUG
+#define BPP_VALIDATE 1
+#else
+#define BPP_VALIDATE 0
+#endif
+#endif
+
+// =========================================================
+// GIT INFO
+// =========================================================
+
+#define BPP_GIT_BRANCH_NAME "@BPP_GIT_BRANCH_NAME@"
+#define BPP_GIT_COMMIT_HASH "@BPP_GIT_COMMIT_HASH@"
+#define BPP_GIT_COMMIT_DATE "@BPP_GIT_COMMIT_DATE@"
+#define BPP_GIT_DIRTY_FLAG "@BPP_GIT_DIRTY_FLAG@"
+#define BPP_GIT_DIRTY_STATUS "@BPP_GIT_DIRTY_STATUS@"
+#define BPP_GIT_TAG "@BPP_GIT_TAG@"
+#define BPP_GIT_COMMIT_INFO "@BPP_GIT_COMMIT_INFO@"
+#define BPP_GIT_COMMIT_INFO_SHORT "@BPP_GIT_COMMIT_INFO_SHORT@"
+#define BPP_GIT_COMMIT_INFO_FULL "@BPP_GIT_COMMIT_INFO_FULL@"
+
+// =========================================================
+// EXTERNAL VARIABLES
+// =========================================================
+
+// =========================================================
+// INTERNAL VARIABLES
+// =========================================================
