@@ -167,13 +167,13 @@
 #define BPP_COMPILER_DEBUG 1
 #endif
 
-#if not defined(BPP_ASSERT)
+#ifndef BPP_ASSERT
 #include <cassert>
 #define BPP_ASSERT assert
 #endif
 
-#if not defined(BPP_VALIDATE)
-#if BPP_DEBUG
+#ifndef BPP_VALIDATE
+#if BPP_COMPILER_DEBUG
 #define BPP_VALIDATE 1
 #else
 #define BPP_VALIDATE 0
@@ -197,6 +197,41 @@
 // =========================================================
 // EXTERNAL VARIABLES
 // =========================================================
+
+namespace box2dpp
+{
+    extern float units_count_per_meter;
+}
+
+/// The maximum number of vertices on a convex polygon. 
+/// Changing this affects performance even if you don't use more vertices.
+#ifndef BPP_MAX_POLYGON_VERTICES
+#define BPP_MAX_POLYGON_VERTICES 8
+#endif
+static_assert(BPP_MAX_POLYGON_VERTICES >= 3, "Must be 3 or more");
+
+// Used to detect bad values. 
+// Positions greater than about 16km will have precision problems, 
+// so 100km as a limit should be fine in all cases.
+#ifndef BPP_HUGE 
+#define BPP_HUGE 100000.f * box2dpp::units_count_per_meter
+#endif
+
+// A small length used as a collision and constraint tolerance. 
+// Usually it is chosen to be numerically significant, but visually insignificant. 
+// In meters. Normally this is 0.5cm.
+// @warning modifying this can have a significant impact on stability
+#ifndef BPP_LINEAR_SLOP
+#define BPP_LINEAR_SLOP .005f * box2dpp::units_count_per_meter
+#endif
+
+// This is used to fatten AABBs in the dynamic tree. 
+// This allows proxies to move by a small amount without triggering a tree adjustment. 
+// This is in meters. Normally this is 5cm.
+// @warning modifying this can have a significant impact on performance
+#ifndef BPP_AABB_MARGIN
+#define BPP_AABB_MARGIN .05f * box2dpp::units_count_per_meter
+#endif
 
 // =========================================================
 // INTERNAL VARIABLES
