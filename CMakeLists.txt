@@ -123,6 +123,9 @@ set(
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/math/vec2.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/math/rotation.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/math/transform.hpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/math.hpp
+	
 )
 
 set(
