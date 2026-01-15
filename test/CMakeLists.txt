@@ -15,9 +15,8 @@ project(
 add_executable(
 	${PROJECT_NAME}
 
-	${PROJECT_SOURCE_DIR}/vec2.cpp
-	${PROJECT_SOURCE_DIR}/rotation.cpp
-	${PROJECT_SOURCE_DIR}/transform.cpp
+	${PROJECT_SOURCE_DIR}/math.cpp
+	${PROJECT_SOURCE_DIR}/collision.cpp
 
 	${PROJECT_SOURCE_DIR}/main.cpp
 )

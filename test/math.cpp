@@ -1,6 +1,4 @@
-#include <numbers>
-
-#include <box2dpp/math/rotation.hpp>
+#include <box2dpp/math.hpp>
 
 #include <prometheus/ut/unit_test.hpp>
 #include <prometheus/version-core.hpp>
@@ -12,7 +10,88 @@ using namespace prometheus;
 
 namespace
 {
-	PROMETHEUS_COMPILER_NO_DESTROY ut::suite<"math.rotation"> _ = [] noexcept -> void
+	PROMETHEUS_COMPILER_NO_DESTROY ut::suite<"math.vec2"> vec2 = [] noexcept -> void
+	{
+		using namespace ut;
+		using box2dpp::Vec2;
+
+		constexpr Vec2 zero{.x = 0, .y = 0};
+		constexpr Vec2 one{.x = 1.f, .y = 1.f};
+		constexpr Vec2 two{.x = 2.f, .y = 2.f};
+		constexpr Vec2 m_one{.x = -1.f, .y = -1.f};
+
+		"operator-(unary)"_test = [&] noexcept -> void
+		{
+			constexpr auto o = -m_one;
+			expect(o.x == value(-m_one.x));
+			expect(o.y == value(-m_one.y));
+		};
+
+		"operator-(vec2)"_test = [&] noexcept -> void
+		{
+			constexpr auto v = zero - two;
+			expect(v.x == value(zero.x - two.x));
+			expect(v.y == value(zero.y - two.y));
+		};
+
+		"operator-(scalar)"_test = [&] noexcept -> void
+		{
+			constexpr auto v = one - 2;
+			expect(v.x == value(one.x - 2));
+			expect(v.y == value(one.y - 2));
+		};
+
+		"operator+(unary)"_test = [&] noexcept -> void
+		{
+			const auto o = +m_one;
+			expect(o.x == value(std::abs(m_one.x)));
+			expect(o.y == value(std::abs(m_one.y)));
+		};
+
+		"operator+(vec2)"_test = [&] noexcept -> void
+		{
+			constexpr auto v = one + two;
+			expect(v.x == value(one.x + two.x));
+			expect(v.y == value(one.y + two.y));
+		};
+
+		"operator+(scalar)"_test = [&] noexcept -> void
+		{
+			constexpr auto v = one + 2;
+			expect(v.x == value(one.x + 2));
+			expect(v.y == value(one.y + 2));
+		};
+
+		"operator*(vec2)"_test = [&] noexcept -> void
+		{
+			constexpr auto v = one * two;
+			expect(v.x == value(one.x * two.x));
+			expect(v.y == value(one.y * two.y));
+		};
+
+		"operator*(scalar)"_test = [&] noexcept -> void
+		{
+			constexpr auto v = one * 2;
+			expect(v.x == value(one.x * 2));
+			expect(v.y == value(one.y * 2));
+		};
+
+		"operator/(vec2)"_test = [&] noexcept -> void
+		{
+			constexpr auto v = one / two;
+			expect(v.x == value(one.x / two.x));
+			expect(v.y == value(one.y / two.y));
+		};
+
+		"operator/(scalar)"_test = [&] noexcept -> void
+		{
+			constexpr auto v = one / 2;
+			expect(v.x == value(one.x / 2));
+			expect(v.y == value(one.y / 2));
+		};
+	};
+
+	PROMETHEUS_COMPILER_NO_DESTROY ut::suite<"math.rotation"> rotation = [] noexcept -> void
 	{
 		using namespace ut;
 		using box2dpp::Vec2;
@@ -37,8 +116,8 @@ namespace
 				const auto sine = std::sin(angle);
 
 				// The cosine and sine approximations are accurate to about 0.1 degrees (0.002 radians)
-				expect(std::abs(rotation.cos - cosine) < .002_f);
-				expect(std::abs(rotation.sin - sine) < .002_f);
+				expect(std::abs(rotation.cos - cosine) <= .002_f);
+				expect(std::abs(rotation.sin - sine) <= .002_f);
 
 				const auto xn = box2dpp::unwind_angle(angle);
 				expect(xn >= value(-std::numbers::pi_v<float>));
@@ -55,7 +134,7 @@ namespace
 				}
 
 				// The approximate atan2 is quite accurate
-				expect(std::abs(diff) < value(ATAN_TOLERANCE));
+				expect(std::abs(diff) <= value(ATAN_TOLERANCE));
 			}
 		};
 
@@ -78,7 +157,7 @@ namespace
 					const auto diff = angle1 - angle2;
 
 					expect(box2dpp::valid(angle1) == "valid angle"_b);
-					expect(std::abs(diff) < value(ATAN_TOLERANCE));
+					expect(std::abs(diff) <= value(ATAN_TOLERANCE));
 				}
 			}
 		};
@@ -90,7 +169,7 @@ namespace
 			const auto diff = angle1 - angle2;
 
 			expect(box2dpp::valid(angle1) == "valid angle"_b);
-			expect(std::abs(diff) < value(ATAN_TOLERANCE));
+			expect(std::abs(diff) <= value(ATAN_TOLERANCE));
 		};
 
 		"0&-1"_test = [] noexcept -> void
@@ -100,7 +179,7 @@ namespace
 			const auto diff = angle1 - angle2;
 
 			expect(box2dpp::valid(angle1) == "valid angle"_b);
-			expect(std::abs(diff) < value(ATAN_TOLERANCE));
+			expect(std::abs(diff) <= value(ATAN_TOLERANCE));
 		};
 
 		"1&0"_test = [] noexcept -> void
@@ -110,7 +189,7 @@ namespace
 			const auto diff = angle1 - angle2;
 
 			expect(box2dpp::valid(angle1) == "valid angle"_b);
-			expect(std::abs(diff) < value(ATAN_TOLERANCE));
+			expect(std::abs(diff) <= value(ATAN_TOLERANCE));
 		};
 
 		"-1&0"_test = [] noexcept -> void
@@ -120,7 +199,7 @@ namespace
 			const auto diff = angle1 - angle2;
 
 			expect(box2dpp::valid(angle1) == "valid angle"_b);
-			expect(std::abs(diff) < value(ATAN_TOLERANCE));
+			expect(std::abs(diff) <= value(ATAN_TOLERANCE));
 		};
 
 		"0&0"_test = [] noexcept -> void
@@ -130,7 +209,7 @@ namespace
 			const auto diff = angle1 - angle2;
 
 			expect(box2dpp::valid(angle1) == "valid angle"_b);
-			expect(std::abs(diff) < value(ATAN_TOLERANCE));
+			expect(std::abs(diff) <= value(ATAN_TOLERANCE));
 		};
 
 		// NLerp of b2Rot has an error of over 4 degrees.
@@ -146,7 +225,7 @@ namespace
 				const auto q = q1.nlerp(q2, alpha);
 				const auto angle = q.angle();
 
-				expect(std::abs(std::numbers::pi_v<float> / 2.f * alpha - angle) < value(std::numbers::pi_v<float> * 5.f / 180.f));
+				expect(std::abs(std::numbers::pi_v<float> / 2.f * alpha - angle) <= value(std::numbers::pi_v<float> * 5.f / 180.f));
 			}
 		};
 
@@ -181,7 +260,7 @@ namespace
 				// Compute the minimal signed angular difference on the circle
 				const auto diff = relative_angle - unwound_angle;
 				const auto unwound_diff = box2dpp::unwind_angle(diff);
-				expect(std::abs(unwound_diff) < value(tolerance));
+				expect(std::abs(unwound_diff) <= value(tolerance));
 			}
 
 			for (auto t = -10.f; t < 10.f; t += .01f)
@@ -192,7 +271,7 @@ namespace
 				const auto relative_angle = q1.angle(q2);
 				const auto unwound_angle = box2dpp::unwind_angle(angle - base_angle);
 
-				expect(std::abs(relative_angle - unwound_angle) < value(tolerance));
+				expect(std::abs(relative_angle - unwound_angle) <= value(tolerance));
 			}
 		};
 
@@ -224,12 +303,48 @@ namespace
 					const auto rotation = Rotation::from(nv, nu);
 					const auto w = rotation.rotate(nv);
 
-					expect(w.x - nu.x < value(std::numeric_limits<float>::epsilon() * 4.f));
-					expect(w.y - nu.y < value(std::numeric_limits<float>::epsilon() * 4.f));
+					expect(w.x - nu.x <= value(std::numeric_limits<float>::epsilon() * 4.f));
+					expect(w.y - nu.y <= value(std::numeric_limits<float>::epsilon() * 4.f));
 				}
 			}
 		};
 
 		get_config().report_level = old_report_level;
+	};
+
+	PROMETHEUS_COMPILER_NO_DESTROY ut::suite<"math.transform"> transform = [] noexcept -> void
+	{
+		using namespace ut;
+		using box2dpp::Vec2;
+		using box2dpp::Rotation;
+		using box2dpp::Transform;
+
+		"transform"_test = [] noexcept -> void
+		{
+			constexpr Vec2 two{.x = 2.f, .y = 2.f};
+
+			const Transform transform1{.point = {.x = -2.f, .y = 3.f}, .rotation = Rotation::from(1.f)};
+			const Transform transform2{.point = {.x = 1.f, .y = .0f}, .rotation = Rotation::from(-2.f)};
+
+			"t1.transform(two)"_test = [&] noexcept -> void
+			{
+				const auto v = transform1.transform(two);
+				const auto iv = transform1.inv_transform(v);
+
+				expect(iv.x - two.x <= value(std::numeric_limits<float>::epsilon() * 8.f));
+				expect(iv.y - two.y <= value(std::numeric_limits<float>::epsilon() * 8.f));
+			};
+
+			"multiply"_test = [&] noexcept -> void
+			{
+				const auto transform = transform2.multiply(transform1);
+
+				const auto v = transform2.transform(transform1.transform(two));
+				const auto u = transform.transform(two);
+
+				expect(u.x - v.x <= value(std::numeric_limits<float>::epsilon() * 10.f));
+				expect(u.y - v.y <= value(std::numeric_limits<float>::epsilon() * 10.f));
+			};
+		};
 	};
 }
