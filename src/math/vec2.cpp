@@ -63,6 +63,22 @@ namespace box2dpp
 		return {.x = y * scalar, .y = -x * scalar};
 	}
 
+	auto cross(const float scalar, const Vec2& vec2) noexcept -> Vec2
+	{
+		return vec2.cross(-scalar);
+	}
+
+	auto Vec2::left_perpendicular() const noexcept -> Vec2
+	{
+		// force adl
+		return box2dpp::cross(1.f, *this);
+	}
+
+	auto Vec2::right_perpendicular() const noexcept -> Vec2
+	{
+		return cross(1.f);
+	}
+
 	auto Vec2::length() const noexcept -> float
 	{
 		return std::sqrt(length_squared());
@@ -93,11 +109,13 @@ namespace box2dpp
 
 	auto Vec2::combination_min(const Vec2& other) const noexcept -> Vec2
 	{
-		return combination(other, std::ranges::min);
+		// return combination(other, std::ranges::min);
+		return combination<std::ranges::min>(other);
 	}
 
 	auto Vec2::combination_max(const Vec2& other) const noexcept -> Vec2
 	{
-		return combination(other, std::ranges::max);
+		// return combination(other, std::ranges::max);
+		return combination<std::ranges::max>(other);
 	}
 }

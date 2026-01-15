@@ -48,6 +48,18 @@ namespace box2dpp
 		/// In 2D this produces a vector.
 		[[nodiscard]] auto cross(float scalar) const noexcept -> Vec2;
 
+		/// Perform the cross product on a scalar and a vector. 
+		/// In 2D this produces a vector.
+		[[nodiscard]] friend auto cross(float scalar, const Vec2& vec2) noexcept -> Vec2;
+
+		/// Get a left pointing perpendicular vector. 
+		/// Equivalent to cross(1.0f, v)
+		[[nodiscard]] auto left_perpendicular() const noexcept -> Vec2;
+
+		/// Get a right pointing perpendicular vector. 
+		/// Equivalent to v.cross(1.0f)
+		[[nodiscard]] auto right_perpendicular() const noexcept -> Vec2;
+
 		/// Get the length of this vector
 		[[nodiscard]] auto length() const noexcept -> float;
 
@@ -74,6 +86,17 @@ namespace box2dpp
 			}
 		{
 			return {.x = functor(x, other.x), .y = functor(y, other.y)};
+		}
+
+		template<auto Functor>
+		[[nodiscard]] constexpr auto combination(const Vec2& other) const noexcept -> Vec2 //
+			requires requires
+			{
+				Functor(x, other.x);
+				Functor(y, other.y);
+			}
+		{
+			return {.x = Functor(x, other.x), .y = Functor(y, other.y)};
 		}
 
 		[[nodiscard]] auto combination_min(const Vec2& other) const noexcept -> Vec2;
@@ -120,12 +143,12 @@ namespace box2dpp
 		return lhs - Vec2{.x = rhs, .y = rhs};
 	}
 
-	[[nodiscard]] constexpr auto operator-=(Vec2& lhs, const Vec2& rhs) noexcept -> Vec2&
+	constexpr auto operator-=(Vec2& lhs, const Vec2& rhs) noexcept -> Vec2&
 	{
 		return lhs = lhs - rhs;
 	}
 
-	[[nodiscard]] constexpr auto operator-=(Vec2& lhs, const float rhs) noexcept -> Vec2&
+	constexpr auto operator-=(Vec2& lhs, const float rhs) noexcept -> Vec2&
 	{
 		return lhs -= Vec2{.x = rhs, .y = rhs};
 	}
@@ -145,12 +168,12 @@ namespace box2dpp
 		return lhs + Vec2{.x = rhs, .y = rhs};
 	}
 
-	[[nodiscard]] constexpr auto operator+=(Vec2& lhs, const Vec2& rhs) noexcept -> Vec2&
+	constexpr auto operator+=(Vec2& lhs, const Vec2& rhs) noexcept -> Vec2&
 	{
 		return lhs = lhs + rhs;
 	}
 
-	[[nodiscard]] constexpr auto operator+=(Vec2& lhs, const float rhs) noexcept -> Vec2&
+	constexpr auto operator+=(Vec2& lhs, const float rhs) noexcept -> Vec2&
 	{
 		return lhs += Vec2{.x = rhs, .y = rhs};
 	}
@@ -170,12 +193,12 @@ namespace box2dpp
 		return lhs * Vec2{.x = rhs, .y = rhs};
 	}
 
-	[[nodiscard]] constexpr auto operator*=(Vec2& lhs, const Vec2& rhs) noexcept -> Vec2&
+	constexpr auto operator*=(Vec2& lhs, const Vec2& rhs) noexcept -> Vec2&
 	{
 		return lhs = lhs * rhs;
 	}
 
-	[[nodiscard]] constexpr auto operator*=(Vec2& lhs, const float rhs) noexcept -> Vec2&
+	constexpr auto operator*=(Vec2& lhs, const float rhs) noexcept -> Vec2&
 	{
 		return lhs *= Vec2{.x = rhs, .y = rhs};
 	}
@@ -195,13 +218,29 @@ namespace box2dpp
 		return lhs / Vec2{.x = rhs, .y = rhs};
 	}
 
-	[[nodiscard]] constexpr auto operator/=(Vec2& lhs, const Vec2& rhs) noexcept -> Vec2&
+	constexpr auto operator/=(Vec2& lhs, const Vec2& rhs) noexcept -> Vec2&
 	{
 		return lhs = lhs / rhs;
 	}
 
-	[[nodiscard]] constexpr auto operator/=(Vec2& lhs, const float rhs) noexcept -> Vec2&
+	constexpr auto operator/=(Vec2& lhs, const float rhs) noexcept -> Vec2&
 	{
 		return lhs /= Vec2{.x = rhs, .y = rhs};
+	}
+
+	// ==========================
+	// TERNARY
+	// ==========================
+
+	// a + s * b
+	[[nodiscard]] constexpr auto multiply_add(const Vec2& a, const float s, const Vec2& b) noexcept -> Vec2
+	{
+		return a + s * b;
+	}
+
+	// a - s * b
+	[[nodiscard]] constexpr auto multiply_sub(const Vec2& a, const float s, const Vec2& b) noexcept -> Vec2
+	{
+		return a - s * b;
 	}
 } // namespace box2dpp
