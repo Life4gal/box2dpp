@@ -16,6 +16,7 @@ add_executable(
 	${PROJECT_NAME}
 
 	${PROJECT_SOURCE_DIR}/math.cpp
+	${PROJECT_SOURCE_DIR}/shape.cpp
 	${PROJECT_SOURCE_DIR}/collision.cpp
 
 	${PROJECT_SOURCE_DIR}/main.cpp
