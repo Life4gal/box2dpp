@@ -117,6 +117,12 @@ set(
 	BPP_PUBLIC_FILES 
 
 	# ==========================
+	# UTILITY
+	# ==========================
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/utility/value_cast.hpp
+
+	# ==========================
 	# MATH
 	# ==========================
 
