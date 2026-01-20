@@ -3,7 +3,7 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#include <box2dpp/collision/capsule.hpp>
+#include <box2dpp/shape/capsule.hpp>
 
 #include <algorithm>
 

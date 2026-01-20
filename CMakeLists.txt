@@ -127,6 +127,20 @@ set(
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/math.hpp
 	
 	# ==========================
+	# SHAPE
+	# ==========================
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/shape/circle.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/shape/capsule.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/shape/polygon.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/shape/segment.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/shape/aabb.hpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/shape/mass_data.hpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/shape.hpp
+
+	# ==========================
 	# COLLISION
 	# ==========================
 
@@ -154,6 +168,17 @@ set(
 	${CMAKE_CURRENT_SOURCE_DIR}/src/math/rotation.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/math/transform.cpp
 	
+	# ==========================
+	# SHAPE
+	# ==========================
+	
+	${CMAKE_CURRENT_SOURCE_DIR}/src/shape/circle.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/shape/capsule.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/shape/polygon.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/shape/segment.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/shape/aabb.cpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/src/shape/mass_data.cpp
 	# ==========================
 	# COLLISION
 	# ==========================

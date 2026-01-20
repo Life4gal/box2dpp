@@ -3,15 +3,15 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#include <box2dpp/collision/mass_data.hpp>
+#include <box2dpp/shape/mass_data.hpp>
 
 #include <algorithm>
 #include <ranges>
 #include <numbers>
 
-#include <box2dpp/collision/circle.hpp>
-#include <box2dpp/collision/capsule.hpp>
-#include <box2dpp/collision/polygon.hpp>
+#include <box2dpp/shape/circle.hpp>
+#include <box2dpp/shape/capsule.hpp>
+#include <box2dpp/shape/polygon.hpp>
 
 namespace box2dpp
 {

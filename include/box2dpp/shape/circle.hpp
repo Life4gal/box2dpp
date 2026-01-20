@@ -20,9 +20,6 @@ namespace box2dpp
 		float radius;
 
 		/// Test a point for overlap with a circle in local space
-		[[nodiscard]] auto in(const Vec2 point) const noexcept -> bool
-		{
-			return center.distance_squared(point) <= radius * radius;
-		}
+		[[nodiscard]] auto in(Vec2 point) const noexcept -> bool;
 	};
 }

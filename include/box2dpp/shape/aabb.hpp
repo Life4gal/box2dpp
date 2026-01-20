@@ -25,6 +25,21 @@ namespace box2dpp
 		Vec2 lower;
 		Vec2 upper;
 
+		/// Compute the bounding box of an array of circles
+		[[nodiscard]] static auto compute(std::span<const Vec2> points, float radius) noexcept -> AABB;
+
+		/// Compute the bounding box of a transformed circle
+		[[nodiscard]] static auto compute(const Circle& circle, const Transform& transform) noexcept -> AABB;
+
+		/// Compute the bounding box of a transformed capsule
+		[[nodiscard]] static auto compute(const Capsule& capsule, const Transform& transform) noexcept -> AABB;
+
+		/// Compute the bounding box of a transformed polygon
+		[[nodiscard]] static auto compute(const Polygon& polygon, const Transform& transform) noexcept -> AABB;
+
+		/// Compute the bounding box of a transformed line segment
+		[[nodiscard]] static auto compute(const Segment& segment, const Transform& transform) noexcept -> AABB;
+
 		[[nodiscard]] auto valid() const noexcept -> bool;
 
 		/// Does this box fully contain another one
@@ -112,20 +127,5 @@ namespace box2dpp
 		/// Enlarge this box to contain another one
 		/// @return true if the AABB grew
 		auto enlarge(const AABB& other) noexcept -> bool;
-
-		/// Compute the bounding box of an array of circles
-		[[nodiscard]] static auto compute(std::span<const Vec2> points, float radius) noexcept -> AABB;
-
-		/// Compute the bounding box of a transformed circle
-		[[nodiscard]] static auto compute(const Circle& circle, const Transform& transform) noexcept -> AABB;
-
-		/// Compute the bounding box of a transformed capsule
-		[[nodiscard]] static auto compute(const Capsule& capsule, const Transform& transform) noexcept -> AABB;
-
-		/// Compute the bounding box of a transformed polygon
-		[[nodiscard]] static auto compute(const Polygon& polygon, const Transform& transform) noexcept -> AABB;
-
-		/// Compute the bounding box of a transformed line segment
-		[[nodiscard]] static auto compute(const Segment& segment, const Transform& transform) noexcept -> AABB;
 	};
 }
