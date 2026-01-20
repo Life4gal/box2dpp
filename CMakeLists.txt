@@ -144,17 +144,13 @@ set(
 	# COLLISION
 	# ==========================
 
-	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/circle.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/capsule.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/hull.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/polygon.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/segment.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/aabb.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/ray_cast.hpp
 
-	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/cast.hpp
-	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/mass_data.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/simplex.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/distance.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/shape_cast.hpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision.hpp
 )
 
 set(
@@ -179,19 +175,16 @@ set(
 	${CMAKE_CURRENT_SOURCE_DIR}/src/shape/aabb.cpp
 
 	${CMAKE_CURRENT_SOURCE_DIR}/src/shape/mass_data.cpp
+
 	# ==========================
 	# COLLISION
 	# ==========================
 
-	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/capsule.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/hull.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/polygon.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/aabb.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/ray_cast.cpp
 
-	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/cast.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/mass_data.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/simplex.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/distance.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/shape_cast.cpp
 )
 
 set_source_files_properties(

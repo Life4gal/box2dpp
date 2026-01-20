@@ -16,23 +16,6 @@ namespace box2dpp
 	class Polygon;
 	class Segment;
 
-	/// Low level ray cast input data
-	class RayCastInput final
-	{
-	public:
-		/// Start point of the ray cast
-		Vec2 origin;
-
-		/// Translation of the ray cast
-		Vec2 translation;
-
-		/// The maximum fraction of the translation to consider, typically 1
-		float max_fraction;
-
-		/// Validate ray cast input data (NaN, etc)
-		[[nodiscard]] auto valid() const noexcept -> bool;
-	};
-
 	/// A distance proxy is used by the GJK algorithm. It encapsulates any shape.
 	/// You can provide between 1 and BPP_MAX_POLYGON_VERTICES and a radius.
 	class ShapeProxy final
@@ -44,7 +27,8 @@ namespace box2dpp
 		/// The number of points.
 		std::uint32_t count;
 
-		/// The external radius of the point cloud. May be zero.
+		/// The external radius of the point cloud. 
+		/// May be zero.
 		float radius;
 
 		/// Make a proxy for use in overlap, shape cast, and related functions.
@@ -108,11 +92,13 @@ namespace box2dpp
 		bool can_encroach;
 	};
 
-	/// Low level ray cast or shape-cast output data.
+	/// Low level shape-cast output data.
 	/// Returns a zero fraction and normal in the case of initial overlap.
-	class CastOutput final
+	class ShapeCast final // NOLINT(clang-diagnostic-padded)
 	{
 	public:
+		const static ShapeCast miss;
+
 		/// The surface normal at the hit point
 		Vec2 normal;
 
@@ -128,34 +114,27 @@ namespace box2dpp
 		/// Did the cast hit?
 		bool hit;
 
-		/// Ray cast versus circle shape in local space.
-		[[nodiscard]] static auto test(const RayCastInput& input, const Circle& circle) noexcept -> CastOutput;
-
-		/// Ray cast versus capsule shape in local space.
-		[[nodiscard]] static auto test(const RayCastInput& input, const Capsule& capsule) noexcept -> CastOutput;
-
-		/// Ray cast versus polygon shape in local space.
-		[[nodiscard]] static auto test(const RayCastInput& input, const Polygon& polygon) noexcept -> CastOutput;
-
-		/// Ray cast versus segment shape in local space.
-		/// Optionally treat the segment as one-sided with hits from the left side being treated as a miss.
-		[[nodiscard]] static auto test(const RayCastInput& input, const Segment& segment, bool one_sided) noexcept -> CastOutput;
-
 		/// Shape cast versus a circle.
-		[[nodiscard]] static auto test(const ShapeCastInput& input, const Circle& circle) noexcept -> CastOutput;
+		[[nodiscard]] static auto test(const ShapeCastInput& input, const Circle& circle) noexcept -> ShapeCast;
 
 		/// Shape cast versus a capsule.
-		[[nodiscard]] static auto test(const ShapeCastInput& input, const Capsule& capsule) noexcept -> CastOutput;
+		[[nodiscard]] static auto test(const ShapeCastInput& input, const Capsule& capsule) noexcept -> ShapeCast;
 
 		/// Shape cast versus a convex polygon.
-		[[nodiscard]] static auto test(const ShapeCastInput& input, const Polygon& polygon) noexcept -> CastOutput;
+		[[nodiscard]] static auto test(const ShapeCastInput& input, const Polygon& polygon) noexcept -> ShapeCast;
 
 		/// Shape cast versus a line segment.
-		[[nodiscard]] static auto test(const ShapeCastInput& input, const Segment& segment) noexcept -> CastOutput;
+		[[nodiscard]] static auto test(const ShapeCastInput& input, const Segment& segment) noexcept -> ShapeCast;
 
 		/// Perform a linear shape cast of shape B moving and shape A fixed.
 		/// Determines the hit point, normal, and translation fraction.
 		/// Initially touching shapes are treated as a miss.
-		[[nodiscard]] static auto test(const ShapeCastPairInput& input) noexcept -> CastOutput;
+		[[nodiscard]] static auto test(const ShapeCastPairInput& input) noexcept -> ShapeCast;
 	};
+
+	// FIXME: error LNK2005
+#ifdef BPP_COMPILER_MSVC
+	inline
+#endif
+	constexpr ShapeCast ShapeCast::miss = {.normal = Vec2::zero, .point = Vec2::zero, .fraction = 0.f, .iterations = 0, .hit = false};
 }

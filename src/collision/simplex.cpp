@@ -8,7 +8,9 @@
 #include <algorithm>
 #include <ranges>
 
-#include <box2dpp/collision/cast.hpp>
+#include <box2dpp/utility/value_cast.hpp>
+
+#include <box2dpp/collision/shape_cast.hpp>
 
 namespace box2dpp
 {
@@ -29,16 +31,13 @@ namespace box2dpp
 	{
 		BPP_ASSERT(simplex.count < std::numeric_limits<std::uint16_t>::max());
 
-		SimplexCache result{.count = static_cast<std::uint16_t>(simplex.count), .index_a = {}, .index_b = {}};
+		SimplexCache result{.count = value_cast<std::uint16_t>(simplex.count), .index_a = {}, .index_b = {}};
 		for (std::uint32_t i = 0; i < simplex.count; ++i)
 		{
 			const auto& vertex = simplex.vertices[i];
 
-			BPP_ASSERT(vertex.index_a < std::numeric_limits<std::uint8_t>::max());
-			BPP_ASSERT(vertex.index_b < std::numeric_limits<std::uint8_t>::max());
-
-			result.index_a[i] = static_cast<std::uint8_t>(vertex.index_a);
-			result.index_b[i] = static_cast<std::uint8_t>(vertex.index_b);
+			result.index_a[i] = value_cast<std::uint8_t>(vertex.index_a);
+			result.index_b[i] = value_cast<std::uint8_t>(vertex.index_b);
 		}
 
 		return result;

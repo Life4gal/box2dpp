@@ -3,19 +3,19 @@
 // This file is subject to the license terms in the LICENSE file
 // found in the top-level directory of this distribution.
 
-#include <box2dpp/collision/cast.hpp>
+#include <box2dpp/collision/ray_cast.hpp>
 
 #include <algorithm>
 #include <limits>
 #include <ranges>
 
-#include <box2dpp/collision/circle.hpp>
-#include <box2dpp/collision/capsule.hpp>
-#include <box2dpp/collision/polygon.hpp>
-#include <box2dpp/collision/segment.hpp>
+#include <box2dpp/shape/circle.hpp>
+#include <box2dpp/shape/capsule.hpp>
+#include <box2dpp/shape/polygon.hpp>
+#include <box2dpp/shape/segment.hpp>
 
-#include <box2dpp/collision/simplex.hpp>
-#include <box2dpp/collision/distance.hpp>
+// RayCast::test(const RayCastInput& input, const Polygon& polygon) ==> ShapeCast::test(const ShapeCastPairInput& input)
+#include <box2dpp/collision/shape_cast.hpp>
 
 namespace box2dpp
 {
@@ -27,67 +27,14 @@ namespace box2dpp
 				box2dpp::valid(max_fraction) and max_fraction >= 0.f and max_fraction < BPP_HUGE;
 	}
 
-	auto ShapeProxy::create(const std::span<const Vec2> points, const float radius) noexcept -> ShapeProxy
+	auto RayCast::from(const ShapeCast& result) noexcept -> RayCast
 	{
-		BPP_ASSERT(points.size() <= BPP_MAX_POLYGON_VERTICES);
+		static_assert(sizeof(RayCast) == sizeof(ShapeCast));
 
-		ShapeProxy result{.points = {}, .count = static_cast<std::uint32_t>(points.size()), .radius = radius};
-		std::ranges::copy(points, result.points);
-
-		return result;
+		return {.normal = result.normal, .point = result.point, .fraction = result.fraction, .iterations = result.iterations, .hit = result.hit};
 	}
 
-	auto ShapeProxy::create(const std::span<const Vec2> points, const float radius, const Transform& transform) noexcept -> ShapeProxy
-	{
-		BPP_ASSERT(points.size() <= BPP_MAX_POLYGON_VERTICES);
-
-		ShapeProxy result{.points = {}, .count = static_cast<std::uint32_t>(points.size()), .radius = radius};
-		std::ranges::transform(
-			points,
-			result.points,
-			[&transform](const Vec2& point) noexcept -> Vec2
-			{
-				return transform.transform(point);
-			}
-		);
-
-		return result;
-	}
-
-	auto ShapeProxy::create(const std::span<const Vec2> points, const float radius, const Vec2& position, const Rotation& rotation) noexcept -> ShapeProxy
-	{
-		return create(points, radius, {.point = position, .rotation = rotation});
-	}
-
-	auto ShapeProxy::find_support(const Vec2& direction) const noexcept -> std::uint16_t
-	{
-		BPP_ASSERT(count != 0);
-
-		std::ptrdiff_t best_index = 0;
-		auto best_value = points[0].dot(direction);
-		for (std::uint32_t i = 1; i < count; ++i)
-		{
-			if (const auto value = points[i].dot(direction);
-				value > best_value)
-			{
-				best_index = i;
-				best_value = value;
-			}
-		}
-
-		BPP_ASSERT(std::cmp_less(best_index, std::numeric_limits<std::uint16_t>::max()));
-		return static_cast<std::uint16_t>(best_index);
-	}
-
-	namespace
-	{
-		[[nodiscard]] constexpr auto cast_missed() noexcept -> CastOutput
-		{
-			return {.normal = Vec2::zero, .point = Vec2::zero, .fraction = 0.f, .iterations = 0, .hit = false};
-		}
-	}
-
-	auto CastOutput::test(const RayCastInput& input, const Circle& circle) noexcept -> CastOutput
+	auto RayCast::test(const RayCastInput& input, const Circle& circle) noexcept -> RayCast
 	{
 		BPP_ASSERT(input.valid());
 
@@ -108,7 +55,7 @@ namespace box2dpp
 				return {.normal = Vec2::zero, .point = input.origin, .fraction = 0.f, .iterations = 0, .hit = true};
 			}
 
-			return cast_missed();
+			return miss;
 		}
 
 		// Find the closest point on ray to origin
@@ -123,7 +70,7 @@ namespace box2dpp
 		if (c2 > r2)
 		{
 			// closest point is outside the circle
-			return cast_missed();
+			return miss;
 		}
 
 		// Pythagoras
@@ -140,7 +87,7 @@ namespace box2dpp
 				return {.normal = Vec2::zero, .point = input.origin, .fraction = 0.f, .iterations = 0, .hit = true};
 			}
 
-			return cast_missed();
+			return miss;
 		}
 
 		// hit point relative to center
@@ -150,7 +97,7 @@ namespace box2dpp
 		return {.normal = normal, .point = multiply_add(circle.center, circle.radius, normal), .fraction = fraction / length, .iterations = 0, .hit = true};
 	}
 
-	auto CastOutput::test(const RayCastInput& input, const Capsule& capsule) noexcept -> CastOutput
+	auto RayCast::test(const RayCastInput& input, const Capsule& capsule) noexcept -> RayCast
 	{
 		BPP_ASSERT(input.valid());
 
@@ -221,7 +168,7 @@ namespace box2dpp
 		if (-std::numeric_limits<float>::epsilon() < den and den < std::numeric_limits<float>::epsilon())
 		{
 			// Ray is parallel to capsule and outside infinite length capsule
-			return cast_missed();
+			return miss;
 		}
 
 		const auto b1 = multiply_sub(q, r, n);
@@ -254,7 +201,7 @@ namespace box2dpp
 
 		if (s2 < 0 or s2 > input.max_fraction * ray_length)
 		{
-			return cast_missed();
+			return miss;
 		}
 
 		// Cramer's rule [b -u]
@@ -276,7 +223,7 @@ namespace box2dpp
 		return {.normal = n, .point = v1.lerp(v2, s1 / capsule_length) + r * n, .fraction = s2 / ray_length, .iterations = 0, .hit = true};
 	}
 
-	auto CastOutput::test(const RayCastInput& input, const Polygon& polygon) noexcept -> CastOutput
+	auto RayCast::test(const RayCastInput& input, const Polygon& polygon) noexcept -> RayCast
 	{
 		BPP_ASSERT(input.valid());
 
@@ -309,7 +256,7 @@ namespace box2dpp
 					// Parallel and runs outside edge
 					if (numerator < 0)
 					{
-						return cast_missed();
+						return miss;
 					}
 				}
 				else
@@ -336,7 +283,7 @@ namespace box2dpp
 				if (upper < lower)
 				{
 					// Ray misses
-					return cast_missed();
+					return miss;
 				}
 			}
 
@@ -361,10 +308,10 @@ namespace box2dpp
 				.max_fraction = input.max_fraction,
 				.can_encroach = false
 		};
-		return test(pair_input);
+		return from(ShapeCast::test(pair_input));
 	}
 
-	auto CastOutput::test(const RayCastInput& input, const Segment& segment, const bool one_sided) noexcept -> CastOutput
+	auto RayCast::test(const RayCastInput& input, const Segment& segment, const bool one_sided) noexcept -> RayCast
 	{
 		BPP_ASSERT(input.valid());
 
@@ -374,7 +321,7 @@ namespace box2dpp
 			if (const auto offset = (input.origin - segment.point1).cross(segment.point2 - segment.point1);
 				offset < 0)
 			{
-				return cast_missed();
+				return miss;
 			}
 		}
 
@@ -390,7 +337,7 @@ namespace box2dpp
 		const auto e_normalized = e.normalize(length);
 		if (length == 0) // NOLINT(clang-diagnostic-float-equal)
 		{
-			return cast_missed();
+			return miss;
 		}
 
 		// Normal points to the right, looking from v1 towards v2
@@ -407,14 +354,14 @@ namespace box2dpp
 		if (denominator == 0) // NOLINT(clang-diagnostic-float-equal)
 		{
 			// parallel
-			return cast_missed();
+			return miss;
 		}
 
 		const auto t = numerator / denominator;
 		if (t < 0 or t > input.max_fraction)
 		{
 			// out of ray range
-			return cast_missed();
+			return miss;
 		}
 
 		// Intersection point on infinite segment
@@ -427,7 +374,7 @@ namespace box2dpp
 		if (s < 0 or s > length)
 		{
 			// out of segment range
-			return cast_missed();
+			return miss;
 		}
 
 		if (numerator > 0)
@@ -436,154 +383,5 @@ namespace box2dpp
 		}
 
 		return {.normal = normal, .point = p, .fraction = t, .iterations = 0, .hit = true};
-	}
-
-	auto CastOutput::test(const ShapeCastInput& input, const Circle& circle) noexcept -> CastOutput
-	{
-		const ShapeCastPairInput pair_input
-		{
-				.proxy_a = ShapeProxy::create({&circle.center, 1}, circle.radius),
-				.proxy_b = input.proxy,
-				.transform_a = Transform::identity,
-				.transform_b = Transform::identity,
-				.translation_b = input.translation,
-				.max_fraction = input.max_fraction,
-				.can_encroach = input.can_encroach
-		};
-		return test(pair_input);
-	}
-
-	auto CastOutput::test(const ShapeCastInput& input, const Capsule& capsule) noexcept -> CastOutput
-	{
-		const Vec2 points[]{capsule.center1, capsule.center2};
-
-		const ShapeCastPairInput pair_input
-		{
-				.proxy_a = ShapeProxy::create({points, 2}, capsule.radius),
-				.proxy_b = input.proxy,
-				.transform_a = Transform::identity,
-				.transform_b = Transform::identity,
-				.translation_b = input.translation,
-				.max_fraction = input.max_fraction,
-				.can_encroach = input.can_encroach
-		};
-		return test(pair_input);
-	}
-
-	auto CastOutput::test(const ShapeCastInput& input, const Polygon& polygon) noexcept -> CastOutput
-	{
-		const ShapeCastPairInput pair_input
-		{
-				.proxy_a = ShapeProxy::create({polygon.vertices, static_cast<std::size_t>(polygon.count)}, polygon.radius),
-				.proxy_b = input.proxy,
-				.transform_a = Transform::identity,
-				.transform_b = Transform::identity,
-				.translation_b = input.translation,
-				.max_fraction = input.max_fraction,
-				.can_encroach = input.can_encroach
-		};
-		return test(pair_input);
-	}
-
-	auto CastOutput::test(const ShapeCastInput& input, const Segment& segment) noexcept -> CastOutput
-	{
-		const Vec2 points[]{segment.point1, segment.point2};
-
-		const ShapeCastPairInput pair_input
-		{
-				.proxy_a = ShapeProxy::create({points, 2}, 0),
-				.proxy_b = input.proxy,
-				.transform_a = Transform::identity,
-				.transform_b = Transform::identity,
-				.translation_b = input.translation,
-				.max_fraction = input.max_fraction,
-				.can_encroach = input.can_encroach
-		};
-		return test(pair_input);
-	}
-
-	auto CastOutput::test(const ShapeCastPairInput& input) noexcept -> CastOutput
-	{
-		// Compute tolerance
-		const auto linear_slop = BPP_LINEAR_SLOP;
-		const auto total_radius = input.proxy_a.radius + input.proxy_b.radius;
-		const auto tolerance = linear_slop * .25f;
-
-		auto target = std::ranges::max(linear_slop, total_radius - linear_slop);
-		BPP_ASSERT(target > tolerance);
-
-		// Prepare input for distance query
-		SimplexCache cache{.count = 0, .index_a = {}, .index_b = {}};
-		DistanceInput distance_input{.proxy_a = input.proxy_a, .proxy_b = input.proxy_b, .transform_a = input.transform_a, .transform_b = input.transform_b, .use_radii = false};
-
-		float fraction = 0.f;
-
-		const auto delta2 = input.translation_b;
-		CastOutput result{.normal = Vec2::zero, .point = Vec2::zero, .fraction = 0.f, .iterations = 0, .hit = false};
-
-		for (std::uint32_t iteration = 0, max_iterations = 20; iteration < max_iterations; ++iteration)
-		{
-			result.iterations += 1;
-
-			const auto output = DistanceOutput::compute(distance_input, cache);
-			if (output.distance < target + tolerance)
-			{
-				if (iteration == 0)
-				{
-					if (input.can_encroach and output.distance > linear_slop * 2.f)
-					{
-						target = output.distance - linear_slop;
-					}
-					else
-					{
-						// Initial overlap
-						result.hit = true;
-
-						// Compute a common point
-						const auto c1 = multiply_add(output.point_a, input.proxy_a.radius, output.normal);
-						const auto c2 = multiply_add(output.point_b, -input.proxy_b.radius, output.normal);
-						result.point = c1.lerp(c2, .5f);
-
-						return result;
-					}
-				}
-				else
-				{
-					// Regular hit
-					BPP_ASSERT(output.distance > 0 and output.normal.normalized());
-
-					result.normal = output.normal;
-					result.point = multiply_add(output.point_a, input.proxy_a.radius, output.normal);
-					result.fraction = fraction;
-					result.hit = true;
-
-					return result;
-				}
-			}
-
-			BPP_ASSERT(output.distance > 0);
-			BPP_ASSERT(output.normal.normalized());
-
-			// Check if shapes are approaching each other
-			const auto denominator = delta2.dot(output.normal);
-			if (denominator >= 0)
-			{
-				// Miss
-				return result;
-			}
-
-			// Advance sweep
-			fraction += (target - output.distance) / denominator;
-			if (fraction >= input.max_fraction)
-			{
-				// Miss
-				return result;
-			}
-
-			distance_input.transform_b.point = multiply_add(input.transform_b.point, fraction, delta2);
-		}
-
-		// Failure!
-		return result;
 	}
 }
