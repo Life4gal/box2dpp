@@ -12,69 +12,83 @@ namespace box2dpp
 	/// Convert any angle into the range [-pi, pi]
 	[[nodiscard]] auto unwind_angle(float radians) noexcept -> float;
 
-	/// 2D rotation
-	/// This is similar to using a complex number for rotation
+	/// 2D rotation represented as a unit complex number (cos(θ), sin(θ))
+	/// This is more efficient than storing angles and recomputing trig functions
 	class Rotation final
 	{
 	public:
 		const static Rotation identity;
 
+		/// Cosine component of the rotation (real part)
 		float cos;
+		/// Sine component of the rotation (imaginary part)
 		float sin;
 
-		/// Make a rotation using an angle in radians
+		/// Construct a rotation from an angle in radians
+		/// Uses rational approximations to avoid expensive std::cos/sin calls
 		[[nodiscard]] static auto from(float radians) noexcept -> Rotation;
 
-		/// Make a rotation using a unit vector
+		/// Construct a rotation from a unit vector representing (cos(θ), sin(θ))
 		[[nodiscard]] static auto from(const Vec2& unit_vector) noexcept -> Rotation;
 
-		/// Compute the rotation between two unit vectors
+		/// Construct rotation that rotates unit_vector1 to align with unit_vector2
+		/// Returns r such that r.rotate(unit_vector1) ≈ unit_vector2
 		[[nodiscard]] static auto from(const Vec2& unit_vector1, const Vec2& unit_vector2) noexcept -> Rotation;
 
 	private:
+		/// Check if individual components are valid floating-point numbers
 		[[nodiscard]] auto valid_angle() const noexcept -> bool;
 
 	public:
+		/// Check if rotation is mathematically valid (finite and normalized)
 		[[nodiscard]] auto valid() const noexcept -> bool;
 
+		/// Check if rotation is approximately normalized (unit length)
 		[[nodiscard]] auto normalized() const noexcept -> bool;
 
-		/// Normalize rotation
+		/// Normalize to unit length, returns identity if length is zero
 		[[nodiscard]] auto normalize() const noexcept -> Rotation;
 
-		/// Integrate rotation from angular velocity
-		/// @param delta the angular displacement in radians
+		/// Apply angular displacement to this rotation
+		/// @param delta Angular displacement in radians (positive for counter-clockwise)
 		[[nodiscard]] auto integrate(float delta) const noexcept -> Rotation;
 
-		/// Get the angle in radians in the range [-pi, pi]
+		/// Extract angle in radians in the principal range [-pi, pi]
 		[[nodiscard]] auto angle() const noexcept -> float;
 
-		/// Relative angle between two rotation
+		/// Relative angle from this rotation to another: angle(this⁻¹ × other)
+		/// Returns signed smallest angle between two rotations
 		[[nodiscard]] auto angle(const Rotation& other) const noexcept -> float;
 
-		/// Get the x-axis
+		/// Get the x-axis (local right direction) after applying this rotation
 		[[nodiscard]] auto axis_x() const noexcept -> Vec2;
 
-		/// Get the y-axis
+		/// Get the y-axis (local up direction) after applying this rotation
 		[[nodiscard]] auto axis_y() const noexcept -> Vec2;
 
-		/// Normalized linear interpolation
+		/// Normalized linear interpolation (faster than SLERP for 2D)
+		/// Interpolates between unit complex numbers and renormalizes
 		// ReSharper disable once IdentifierTypo
 		[[nodiscard]] auto nlerp(const Rotation& other, float t) const noexcept -> Rotation;
 
-		// Inverse a rotation
+		/// Get the inverse/conjugate rotation: (cos(θ), -sin(θ))
 		[[nodiscard]] auto inv() const noexcept -> Rotation;
 
-		/// Rotate a vector
+		/// Rotate a vector by this rotation: v' = R * v
 		[[nodiscard]] auto rotate(const Vec2& vec2) const noexcept -> Vec2;
 
-		/// Inverse rotate a vector
+		/// Inverse rotate a vector: v' = R⁻¹ * v = Rᵀ * v
 		[[nodiscard]] auto inv_rotate(const Vec2& vec2) const noexcept -> Vec2;
 
-		/// Multiply two rotations
+		/// Compose rotations: returns this × other (apply other first, then this)
 		[[nodiscard]] auto multiply(const Rotation& other) const noexcept -> Rotation;
 
-		/// Transpose multiply two rotations
+		/// Multiply by inverse: returns this⁻¹ × other (relative rotation from this to other)
+		/// Represents rotation needed to go from this orientation to other orientation
+		[[nodiscard]] auto multiply_by_inv(const Rotation& other) const noexcept -> Rotation;
+
+		/// Inverse multiply: returns other × this⁻¹ (change of basis from this frame to other frame)
+		/// Represents rotation from other's perspective of this rotation
 		[[nodiscard]] auto inv_multiply(const Rotation& other) const noexcept -> Rotation;
 	};
 

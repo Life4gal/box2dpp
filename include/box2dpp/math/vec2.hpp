@@ -11,10 +11,10 @@
 
 namespace box2dpp
 {
+	/// Check if a floating-point value is finite and not NaN
 	[[nodiscard]] auto valid(float value) noexcept -> bool;
 
-	/// 2D vector
-	/// This can be used to represent a point or free vector
+	/// 2D vector for points, directions, and coordinates
 	class Vec2 final
 	{
 	public:
@@ -26,57 +26,54 @@ namespace box2dpp
 		// [[nodiscard]] constexpr auto operator<=>(const Vec2& other) const noexcept -> std::partial_ordering = default;
 		[[nodiscard]] constexpr auto operator==(const Vec2& other) const noexcept -> bool = default;
 
+		/// Check if vector components are finite and not NaN
 		[[nodiscard]] auto valid() const noexcept -> bool;
 
+		/// Check if vector is approximately unit length
 		[[nodiscard]] auto normalized() const noexcept -> bool;
 
-		/// Convert a vector into a unit vector if possible, otherwise returns the zero vector.
+		/// Return unit vector in same direction, or zero if length is negligible
 		[[nodiscard]] auto normalize() const noexcept -> Vec2;
 
-		/// Convert a vector into a unit vector if possible, otherwise returns the zero vector.
-		/// Also outputs the length.
+		/// Return unit vector and also provide the original length
 		[[nodiscard]] auto normalize(float& length) const noexcept -> Vec2;
 
-		/// Vector dot product
+		/// Dot product: a·b = a.x*b.x + a.y*b.y
 		[[nodiscard]] auto dot(const Vec2& other) const noexcept -> float;
 
-		/// Vector cross product.
-		/// In 2D this yields a scalar.
+		/// 2D cross product (scalar): a×b = a.x*b.y - a.y*b.x
+		/// Returns signed area of parallelogram, positive for counter-clockwise from a to b
 		[[nodiscard]] auto cross(const Vec2& other) const noexcept -> float;
 
-		/// Perform the cross product on a vector and a scalar.
-		/// In 2D this produces a vector.
+		/// Cross product with scalar (vector result): v×s = (v.y*s, -v.x*s)
 		[[nodiscard]] auto cross(float scalar) const noexcept -> Vec2;
 
-		/// Perform the cross product on a scalar and a vector. 
-		/// In 2D this produces a vector.
+		/// Cross product with scalar (vector result): s×v = (-v.y*s, v.x*s)
 		[[nodiscard]] friend auto cross(float scalar, const Vec2& vec2) noexcept -> Vec2;
 
-		/// Get a left pointing perpendicular vector. 
-		/// Equivalent to cross(1.0f, v)
+		/// Left perpendicular (90° counter-clockwise rotation): (-y, x)
 		[[nodiscard]] auto left_perpendicular() const noexcept -> Vec2;
 
-		/// Get a right pointing perpendicular vector. 
-		/// Equivalent to v.cross(1.0f)
+		/// Right perpendicular (90° clockwise rotation): (y, -x)
 		[[nodiscard]] auto right_perpendicular() const noexcept -> Vec2;
 
-		/// Get the length of this vector
+		/// Euclidean length (magnitude)
 		[[nodiscard]] auto length() const noexcept -> float;
 
-		/// Get the length squared of this vector
-		/// dot(self)
+		/// Squared length (faster, avoids sqrt)
 		[[nodiscard]] auto length_squared() const noexcept -> float;
 
-		/// Get the distance between points
+		/// Distance between points
 		[[nodiscard]] auto distance(const Vec2& other) const noexcept -> float;
 
-		/// Get the distance squared between points
+		/// Squared distance between points
 		[[nodiscard]] auto distance_squared(const Vec2& other) const noexcept -> float;
 
-		/// Vector linear interpolation
+		/// Linear interpolation: (1-t)*this + t*other
 		// ReSharper disable once IdentifierTypo
 		[[nodiscard]] auto lerp(const Vec2& other, float t) const noexcept -> Vec2;
 
+		/// Component-wise combination using a binary functor
 		template<typename Functor>
 		[[nodiscard]] constexpr auto combination(const Vec2& other, Functor functor) const noexcept -> Vec2 //
 			requires requires
@@ -88,6 +85,7 @@ namespace box2dpp
 			return {.x = functor(x, other.x), .y = functor(y, other.y)};
 		}
 
+		/// Component-wise combination using a compile-time binary function
 		template<auto Functor>
 		[[nodiscard]] constexpr auto combination(const Vec2& other) const noexcept -> Vec2 //
 			requires requires
@@ -99,9 +97,29 @@ namespace box2dpp
 			return {.x = Functor(x, other.x), .y = Functor(y, other.y)};
 		}
 
+		/// Component-wise minimum
 		[[nodiscard]] auto combination_min(const Vec2& other) const noexcept -> Vec2;
 
+		/// Component-wise maximum
 		[[nodiscard]] auto combination_max(const Vec2& other) const noexcept -> Vec2;
+
+		/// Component-wise absolute value
+		[[nodiscard]] auto abs() const noexcept -> Vec2;
+
+		/// Component-wise floor
+		[[nodiscard]] auto floor() const noexcept -> Vec2;
+
+		/// Component-wise ceiling
+		[[nodiscard]] auto ceil() const noexcept -> Vec2;
+
+		/// Reflect vector across a unit normal
+		[[nodiscard]] auto reflect(const Vec2& normal) const noexcept -> Vec2;
+
+		/// Project vector onto another vector
+		[[nodiscard]] auto project(const Vec2& onto) const noexcept -> Vec2;
+
+		/// Reject vector from another vector (perpendicular component)
+		[[nodiscard]] auto reject(const Vec2& from) const noexcept -> Vec2;
 	};
 
 	// FIXME: error LNK2005
@@ -121,7 +139,7 @@ namespace box2dpp
 
 	[[nodiscard]] /*constexpr*/ inline auto operator+(const Vec2& vec2) noexcept -> Vec2
 	{
-		return {.x = std::abs(vec2.x), .y = std::abs(vec2.y)};
+		return vec2.abs();
 	}
 
 	// ==========================
@@ -232,13 +250,13 @@ namespace box2dpp
 	// TERNARY
 	// ==========================
 
-	// a + s * b
+	/// Fused multiply-add: a + s * b
 	[[nodiscard]] constexpr auto multiply_add(const Vec2& a, const float s, const Vec2& b) noexcept -> Vec2
 	{
 		return a + s * b;
 	}
 
-	// a - s * b
+	/// Fused multiply-subtract: a - s * b
 	[[nodiscard]] constexpr auto multiply_sub(const Vec2& a, const float s, const Vec2& b) noexcept -> Vec2
 	{
 		return a - s * b;
