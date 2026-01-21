@@ -9,28 +9,51 @@
 
 namespace box2dpp
 {
-	auto Capsule::in(const Vec2 point) const noexcept -> bool
+	auto Capsule::valid() const noexcept -> bool
+	{
+		// Check for valid radius and finite points
+		return radius > 0.0f and box2dpp::valid(radius) and center1.valid() and center2.valid();
+	}
+
+	auto Capsule::length() const noexcept -> float
+	{
+		// Distance between the two centers
+		return center1.distance(center2);
+	}
+
+	auto Capsule::direction() const noexcept -> Vec2
+	{
+		if (center1 == center2)
+		{
+			// Default direction for zero-length capsule
+			return {.x = 1.0f, .y = 0.0f};
+		}
+
+		// Vector from center1 to center2, normalized
+		return (center2 - center1).normalize();
+	}
+
+	auto Capsule::in(const Vec2& point) const noexcept -> bool
 	{
 		const auto r2 = radius * radius;
 
+		// Capsule is effectively a circle when centers are the same
 		if (center2 == center1)
 		{
-			// Capsule is really a circle
 			return center1.distance_squared(point) <= r2;
 		}
 
+		// Compute vector between capsule centers and its squared length
 		const auto diff = center2 - center1;
 		const auto diff_l2 = diff.length_squared();
 
-		// Get closest point on capsule segment
-		// c = center1 + t * d
-		// dot(point - c, d) = 0
-		// dot(point - center1 - t * d, d) = 0
-		// t = dot(point - center1, d) / dot(d, d)
+		// Find closest point on capsule's central line segment using projection
+		// t = clamp((point - center1)·diff / diff·diff, 0, 1)
 		const auto t = std::ranges::clamp((point - center1).dot(diff) / diff_l2, .0f, 1.f);
+		// Closest point on line-segment
 		const auto c = center1 + t * diff;
 
-		// Is query point within radius around closest point?
+		// Check if point is within radius of the closest point
 		return point.distance_squared(c) <= radius;
 	}
 }

@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <array>
 #include <span>
 
 #include <box2dpp/math.hpp>
@@ -16,7 +17,7 @@ namespace box2dpp
 	{
 	public:
 		/// The final points of the hull
-		Vec2 points[BPP_MAX_POLYGON_VERTICES];
+		std::array<Vec2, BPP_MAX_POLYGON_VERTICES> points;
 
 		/// The number of points
 		std::uint32_t count;
@@ -53,10 +54,10 @@ namespace box2dpp
 	{
 	public:
 		/// The polygon vertices
-		Vec2 vertices[BPP_MAX_POLYGON_VERTICES];
+		std::array<Vec2, BPP_MAX_POLYGON_VERTICES> vertices;
 
 		/// The outward normal vectors of the polygon sides
-		Vec2 normals[BPP_MAX_POLYGON_VERTICES];
+		std::array<Vec2, BPP_MAX_POLYGON_VERTICES> normals;
 
 		/// The centroid of the polygon
 		Vec2 centroid;

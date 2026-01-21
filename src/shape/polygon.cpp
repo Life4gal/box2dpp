@@ -35,7 +35,7 @@ namespace box2dpp
 		const auto e = (p2 - p1).normalize();
 
 		// discard points left of e and find point furthest to the right of e
-		Vec2 right_points[BPP_MAX_POLYGON_VERTICES];
+		std::array<Vec2, BPP_MAX_POLYGON_VERTICES> right_points;
 		std::ptrdiff_t right_count = 0;
 		std::ptrdiff_t best_index = 0;
 		auto best_distance = (points[best_index] - p1).cross(e);
@@ -70,19 +70,19 @@ namespace box2dpp
 
 		const auto best_point = points[best_index];
 		// compute hull to the right of p1-best_point
-		const auto h1 = recurse_create(p1, best_point, {right_points, right_points + right_count});
+		const auto h1 = recurse_create(p1, best_point, {right_points.data(), static_cast<std::size_t>(right_count)});
 		// compute hull to the right of best_point-p2
-		const auto h2 = recurse_create(best_point, p2, {right_points, right_points + right_count});
+		const auto h2 = recurse_create(best_point, p2, {right_points.data(), static_cast<std::size_t>(right_count)});
 
 		// stitch together hulls
 
-		std::ranges::copy(std::views::counted(h1.points, h1.count), result.points + result.count);
+		std::ranges::copy(std::views::counted(h1.points.data(), h1.count), result.points.data() + result.count);
 		result.count += h1.count;
 
 		result.points[result.count] = best_point;
 		result.count += 1;
 
-		std::ranges::copy(std::views::counted(h2.points, h2.count), result.points + result.count);
+		std::ranges::copy(std::views::counted(h2.points.data(), h2.count), result.points.data() + result.count);
 		result.count += h2.count;
 
 		BPP_ASSERT(result.count < BPP_MAX_POLYGON_VERTICES);
@@ -114,7 +114,7 @@ namespace box2dpp
 
 		// Perform aggressive point welding. First point always remains.
 		// Also compute the bounding box for later.
-		Vec2 computed_points[BPP_MAX_POLYGON_VERTICES];
+		std::array<Vec2, BPP_MAX_POLYGON_VERTICES> computed_points;
 		std::ptrdiff_t computed_count = 0;
 		for (std::size_t index = 0; index < points.size(); ++index)
 		{
@@ -148,7 +148,7 @@ namespace box2dpp
 
 		const auto find_furthest_point_index = [computed_points](const std::ptrdiff_t c, const Vec2 base) noexcept -> std::ptrdiff_t
 		{
-			const auto r = std::views::counted(computed_points, c);
+			const auto r = std::views::counted(computed_points.data(), c);
 			const auto it = std::ranges::max_element(
 				r,
 				{},
@@ -180,13 +180,13 @@ namespace box2dpp
 		const auto e = (p2 - p1).normalize();
 
 		// split the points into points that are left and right of the line p1-p2.
-		Vec2 right_points[BPP_MAX_POLYGON_VERTICES - 2];
-		Vec2 left_points[BPP_MAX_POLYGON_VERTICES - 2];
+		std::array<Vec2, BPP_MAX_POLYGON_VERTICES - 2> right_points;
+		std::array<Vec2, BPP_MAX_POLYGON_VERTICES - 2> left_points;
 		std::ptrdiff_t right_count = 0;
 		std::ptrdiff_t left_count = 0;
 
 		std::ranges::for_each(
-			std::views::counted(computed_points, computed_count),
+			std::views::counted(computed_points.data(), computed_count),
 			[&](const Vec2& p) noexcept -> void
 			{
 				// slop used here to skip points that are very close to the line p1-p2
@@ -205,8 +205,8 @@ namespace box2dpp
 		);
 
 		// compute hulls on right and left
-		const auto h1 = recurse_create(p1, p2, {right_points, right_points + right_count});
-		const auto h2 = recurse_create(p2, p1, {left_points, left_points + left_count});
+		const auto h1 = recurse_create(p1, p2, {right_points.data(), static_cast<std::size_t>(right_count)});
+		const auto h2 = recurse_create(p2, p1, {left_points.data(), static_cast<std::size_t>(left_count)});
 
 		if (h1.count == 0 or h2.count == 0)
 		{
@@ -221,13 +221,13 @@ namespace box2dpp
 		result.points[result.count] = p1;
 		result.count += 1;
 
-		std::ranges::copy(std::views::counted(h1.points, h1.count), result.points + result.count);
+		std::ranges::copy(std::views::counted(h1.points.data(), h1.count), result.points.data() + result.count);
 		result.count += h1.count;
 
 		result.points[result.count] = p2;
 		result.count += 1;
 
-		std::ranges::copy(std::views::counted(h2.points, h2.count), result.points + result.count);
+		std::ranges::copy(std::views::counted(h2.points.data(), h2.count), result.points.data() + result.count);
 		result.count += h2.count;
 
 		BPP_ASSERT(result.count <= BPP_MAX_POLYGON_VERTICES);
@@ -390,7 +390,7 @@ namespace box2dpp
 		};
 
 		// Copy vertices
-		std::ranges::copy(std::views::counted(hull.points, hull.count), result.vertices);
+		std::ranges::copy(std::views::counted(hull.points.data(), hull.count), result.vertices.data());
 
 		// Compute normals. Ensure the edges have non-zero length.
 		for (std::uint32_t index_v1 = 0; index_v1 < result.count; ++index_v1)
@@ -405,7 +405,7 @@ namespace box2dpp
 			result.normals[index_v1] = edge.cross(1.f).normalize();
 		}
 
-		result.centroid = compute_centroid({result.vertices, result.vertices + result.count});
+		result.centroid = compute_centroid({result.vertices.data(), result.count});
 
 		return result;
 	}
@@ -438,8 +438,8 @@ namespace box2dpp
 
 		// Copy vertices
 		std::ranges::transform(
-			std::views::counted(hull.points, hull.count),
-			result.vertices,
+			std::views::counted(hull.points.data(), hull.count),
+			result.vertices.data(),
 			[&transform](const Vec2& point) noexcept -> Vec2
 			{
 				return transform.transform(point);
@@ -459,7 +459,7 @@ namespace box2dpp
 			result.normals[index_v1] = edge.cross(1.f).normalize();
 		}
 
-		result.centroid = compute_centroid({result.vertices, result.vertices + result.count});
+		result.centroid = compute_centroid({result.vertices.data(), result.count});
 
 		return result;
 	}
@@ -483,19 +483,19 @@ namespace box2dpp
 		return
 		{
 				.vertices =
-				{
+				{{
 						{.x = -half_width, .y = -half_height},
 						{.x = half_width, .y = -half_height},
 						{.x = half_width, .y = half_height},
 						{.x = -half_width, .y = half_height},
-				},
+				}},
 				.normals =
-				{
+				{{
 						{.x = 0, .y = -1},
 						{.x = 1, .y = 0},
 						{.x = 0, .y = 1},
 						{.x = -1, .y = 0},
-				},
+				}},
 				.centroid = {.x = 0, .y = 0},
 				.radius = radius,
 				.count = 4,
@@ -509,7 +509,7 @@ namespace box2dpp
 
 	auto Polygon::make_box(const float half_width, const float half_height, const Vec2& center, const Rotation& rotation, const float radius) noexcept -> Polygon
 	{
-		BPP_ASSERT(box2dpp::valid(radius) and radius > 0);
+		BPP_ASSERT(box2dpp::valid(radius) and radius >= 0);
 
 		const Transform transform{.point = center, .rotation = rotation};
 
@@ -540,8 +540,8 @@ namespace box2dpp
 		auto p = polygon;
 
 		for (auto [vertex, normal]: std::views::zip(
-			     std::views::counted(p.vertices, p.count),
-			     std::views::counted(p.normals, p.count)
+			     std::views::counted(p.vertices.data(), p.count),
+			     std::views::counted(p.normals.data(), p.count)
 		     ))
 		{
 			vertex = transform.transform(vertex);
@@ -557,14 +557,14 @@ namespace box2dpp
 	{
 		const DistanceInput input
 		{
-				.proxy_a = ShapeProxy::create({vertices, count}, 0),
+				.proxy_a = ShapeProxy::create({vertices.data(), count}, 0),
 				.proxy_b = ShapeProxy::create({&point, 1}, 0),
 				.transform_a = Transform::identity,
 				.transform_b = Transform::identity,
 				.use_radii = false
 		};
 
-		const auto output = DistanceOutput::compute(input, {});
+		const auto output = Distance::compute(input);
 
 		return output.distance <= radius;
 	}

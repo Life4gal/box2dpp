@@ -13,17 +13,17 @@ namespace box2dpp
 	class Capsule;
 	class Polygon;
 
-	/// This holds the mass data computed for a shape.
+	/// Holds the mass data computed for a shape (mass, center of mass, and rotational inertia)
 	class MassData final
 	{
 	public:
-		/// The mass of the shape, usually in kilograms.
+		/// Mass of the shape (usually in kilograms)
 		float mass;
 
-		/// The position of the shape's centroid relative to the shape's origin.
+		/// Position of the shape's centroid relative to the shape's origin
 		Vec2 center;
 
-		/// The rotational inertia of the shape about the shape center.
+		/// Rotational inertia about the centroid
 		float rotational_inertia;
 
 		/// Compute mass properties of a circle
@@ -34,5 +34,8 @@ namespace box2dpp
 
 		/// Compute mass properties of a polygon
 		[[nodiscard]] static auto compute(const Polygon& polygon, float density) noexcept -> MassData;
+
+		/// Check if mass data is valid (positive mass and inertia, finite values)
+		[[nodiscard]] auto valid() const noexcept -> bool;
 	};
 }

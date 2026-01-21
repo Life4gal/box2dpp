@@ -22,10 +22,11 @@ namespace box2dpp
 	class AABB final
 	{
 	public:
+		/// Minimum point (bottom-left) of the AABB
 		Vec2 lower;
+		/// Maximum point (top-right) of the AABB
 		Vec2 upper;
 
-		/// Compute the bounding box of an array of circles
 		[[nodiscard]] static auto compute(std::span<const Vec2> points, float radius) noexcept -> AABB;
 
 		/// Compute the bounding box of a transformed circle
@@ -40,23 +41,37 @@ namespace box2dpp
 		/// Compute the bounding box of a transformed line segment
 		[[nodiscard]] static auto compute(const Segment& segment, const Transform& transform) noexcept -> AABB;
 
+		/// Check if the AABB is valid (lower <= upper and both points are valid)
 		[[nodiscard]] auto valid() const noexcept -> bool;
 
-		/// Does this box fully contain another one
+		/// Check if this AABB fully contains another AABB
 		[[nodiscard]] auto contains(const AABB& other) const noexcept -> bool;
 
-		/// Does this box overlapped another one
+		/// Check if a point is inside the AABB
+		[[nodiscard]] auto contains(const Vec2& point) const noexcept -> bool;
+
+		/// Check if this AABB overlaps with another AABB
 		[[nodiscard]] auto overlaps(const AABB& other) const noexcept -> bool;
 
-		/// Get the center of the AABB.
+		/// Get the center point of the AABB
 		[[nodiscard]] auto center() const noexcept -> Vec2;
 
-		/// Get the extents of the AABB (half-widths).
+		/// Get the extents (half-width and half-height) of the AABB
 		[[nodiscard]] auto extents() const noexcept -> Vec2;
 
-		// Get surface area of an AABB (the perimeter length)
+		/// Get the perimeter (surface area) of the AABB
 		[[nodiscard]] auto perimeter() const noexcept -> float;
 
+		/// Get the width of the AABB
+		[[nodiscard]] auto width() const noexcept -> float;
+
+		/// Get the height of the AABB
+		[[nodiscard]] auto height() const noexcept -> float;
+
+		/// Get the area of the AABB
+		[[nodiscard]] auto area() const noexcept -> float;
+
+		/// Component-wise combination using a binary functor
 		template<typename LowerFunctor, typename UpperFunctor>
 		[[nodiscard]] constexpr auto combination(
 			const AABB& other,
@@ -72,6 +87,7 @@ namespace box2dpp
 			return {.lower = lower_functor(lower, other.lower), .upper = upper_functor(upper, other.upper)};
 		}
 
+		/// Component-wise combination using a compile-time binary function
 		template<auto LowerFunctor, auto UpperFunctor>
 		[[nodiscard]] constexpr auto combination(const AABB& other) const noexcept -> AABB //
 			requires requires
@@ -83,6 +99,7 @@ namespace box2dpp
 			return {.lower = LowerFunctor(lower, other.lower), .upper = UpperFunctor(upper, other.upper)};
 		}
 
+		/// Component-wise combination using a member function
 		template<auto LowerFunctor, auto UpperFunctor>
 		[[nodiscard]] constexpr auto combination(const AABB& other) const noexcept -> AABB //
 			requires requires
@@ -94,10 +111,13 @@ namespace box2dpp
 			return {.lower = (lower.*LowerFunctor)(other.lower), .upper = (upper.*UpperFunctor)(other.upper)};
 		}
 
+		/// Combine with another AABB by taking the minimum bounds (intersection)
 		[[nodiscard]] auto combination_min(const AABB& other) const noexcept -> AABB;
 
+		/// Combine with another AABB by taking the maximum bounds (union)
 		[[nodiscard]] auto combination_max(const AABB& other) const noexcept -> AABB;
 
+		/// Component-wise combination using a compile-time binary function
 		template<auto LowerFunctor, auto UpperFunctor>
 		[[nodiscard]] constexpr auto combination(const Vec2& point) const noexcept -> AABB //
 			requires requires
@@ -109,6 +129,7 @@ namespace box2dpp
 			return {.lower = LowerFunctor(lower, point), .upper = UpperFunctor(upper, point)};
 		}
 
+		/// Component-wise combination using a member function
 		template<auto LowerFunctor, auto UpperFunctor>
 		[[nodiscard]] constexpr auto combination(const Vec2& point) const noexcept -> AABB //
 			requires requires
@@ -120,12 +141,18 @@ namespace box2dpp
 			return {.lower = (lower.*LowerFunctor)(point), .upper = (upper.*UpperFunctor)(point)};
 		}
 
+		/// Combine with a point by taking the minimum bounds
 		[[nodiscard]] auto combination_min(const Vec2& point) const noexcept -> AABB;
 
+		/// Combine with a point by taking the maximum bounds
 		[[nodiscard]] auto combination_max(const Vec2& point) const noexcept -> AABB;
 
-		/// Enlarge this box to contain another one
-		/// @return true if the AABB grew
+		/// Enlarge this AABB to contain another AABB
+		/// @return true if the AABB was actually enlarged
 		auto enlarge(const AABB& other) noexcept -> bool;
+
+		/// Enlarge this AABB to contain a point
+		/// @return true if the AABB was actually enlarged
+		auto enlarge(const Vec2& point) noexcept -> bool;
 	};
 }
