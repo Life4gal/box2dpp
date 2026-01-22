@@ -5,14 +5,10 @@
 
 #pragma once
 
-#include <box2dpp/collision/circle.hpp>
-#include <box2dpp/collision/capsule.hpp>
-#include <box2dpp/collision/hull.hpp>
-#include <box2dpp/collision/polygon.hpp>
-#include <box2dpp/collision/segment.hpp>
-#include <box2dpp/collision/aabb.hpp>
+#include <box2dpp/collision/ray_cast.hpp>
 
-#include <box2dpp/collision/cast.hpp>
-#include <box2dpp/collision/mass_data.hpp>
 #include <box2dpp/collision/simplex.hpp>
 #include <box2dpp/collision/distance.hpp>
+#include <box2dpp/collision/shape_cast.hpp>
+
+#include <box2dpp/collision/time_of_impact.hpp>
