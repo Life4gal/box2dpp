@@ -35,7 +35,7 @@ namespace box2dpp
 		/// - more than BPP_MAX_POLYGON_VERTICES points
 		/// This welds close points and removes collinear points.
 		/// @warning Do not modify a hull once it has been computed
-		[[nodiscard]] static auto create(std::span<const Vec2> points) noexcept -> Hull;
+		[[nodiscard]] static auto from(std::span<const Vec2> points) noexcept -> Hull;
 
 		/// This determines if a hull is valid. 
 		/// Checks for:

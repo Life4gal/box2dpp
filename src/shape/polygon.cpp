@@ -90,7 +90,7 @@ namespace box2dpp
 		return result;
 	}
 
-	auto Hull::create(const std::span<const Vec2> points) noexcept -> Hull
+	auto Hull::from(const std::span<const Vec2> points) noexcept -> Hull
 	{
 		Hull result{.points = {}, .count = 0};
 
@@ -557,8 +557,8 @@ namespace box2dpp
 	{
 		const DistanceInput input
 		{
-				.proxy_a = ShapeProxy::create({vertices.data(), count}, 0),
-				.proxy_b = ShapeProxy::create({&point, 1}, 0),
+				.proxy_a = ShapeProxy::from({vertices.data(), count}, 0),
+				.proxy_b = ShapeProxy::from({&point, 1}, 0),
 				.transform_a = Transform::identity,
 				.transform_b = Transform::identity,
 				.use_radii = false
