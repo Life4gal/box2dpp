@@ -8,75 +8,61 @@
 #include <algorithm>
 #include <ranges>
 
-#include <box2dpp/utility/value_cast.hpp>
-
-#include <box2dpp/shape/circle.hpp>
-#include <box2dpp/shape/capsule.hpp>
-#include <box2dpp/shape/polygon.hpp>
-#include <box2dpp/shape/segment.hpp>
-
-// ShapeCast::test(const ShapeCastPairInput& input)
 #include <box2dpp/collision/simplex.hpp>
 #include <box2dpp/collision/distance.hpp>
 
 namespace box2dpp
 {
-	auto ShapeProxy::create(const std::span<const Vec2> points, const float radius) noexcept -> ShapeProxy
+	auto ShapeCastInput::valid() const noexcept -> bool
 	{
-		BPP_ASSERT(points.size() <= BPP_MAX_POLYGON_VERTICES);
-
-		ShapeProxy result{.points = {}, .count = value_cast<std::uint32_t>(points.size()), .radius = radius};
-		std::ranges::copy(points, result.points);
-
-		return result;
-	}
-
-	auto ShapeProxy::create(const std::span<const Vec2> points, const float radius, const Transform& transform) noexcept -> ShapeProxy
-	{
-		BPP_ASSERT(points.size() <= BPP_MAX_POLYGON_VERTICES);
-
-		ShapeProxy result{.points = {}, .count = value_cast<std::uint32_t>(points.size()), .radius = radius};
-		std::ranges::transform(
-			points,
-			result.points,
-			[&transform](const Vec2& point) noexcept -> Vec2
-			{
-				return transform.transform(point);
-			}
-		);
-
-		return result;
-	}
-
-	auto ShapeProxy::create(const std::span<const Vec2> points, const float radius, const Vec2& position, const Rotation& rotation) noexcept -> ShapeProxy
-	{
-		return create(points, radius, {.point = position, .rotation = rotation});
-	}
-
-	auto ShapeProxy::find_support(const Vec2& direction) const noexcept -> std::uint16_t
-	{
-		BPP_ASSERT(count != 0);
-
-		std::ptrdiff_t best_index = 0;
-		auto best_value = points[0].dot(direction);
-		for (std::uint32_t i = 1; i < count; ++i)
+		if (not proxy.valid())
 		{
-			if (const auto value = points[i].dot(direction);
-				value > best_value)
-			{
-				best_index = i;
-				best_value = value;
-			}
+			return false;
 		}
 
-		return value_cast<std::uint16_t>(best_index);
+		if (not translation.valid())
+		{
+			return false;
+		}
+
+		if (not box2dpp::valid(max_fraction) or max_fraction < 0 or max_fraction > 1)
+		{
+			return false;
+		}
+
+		return true;
 	}
 
-	auto ShapeCast::test(const ShapeCastInput& input, const Circle& circle) noexcept -> ShapeCast
+	auto ShapeCastPairInput::valid() const noexcept -> bool
+	{
+		if (not proxy_a.valid() or not proxy_b.valid())
+		{
+			return false;
+		}
+
+		if (not transform_a.valid() or not transform_b.valid())
+		{
+			return false;
+		}
+
+		if (not translation_b.valid())
+		{
+			return false;
+		}
+
+		if (not box2dpp::valid(max_fraction) or max_fraction < 0 or max_fraction > 1)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	auto ShapeCast::test(const ShapeCastInput& input, const Circle& circle) noexcept -> std::optional<ShapeCastOutput>
 	{
 		const ShapeCastPairInput pair_input
 		{
-				.proxy_a = ShapeProxy::create({&circle.center, 1}, circle.radius),
+				.proxy_a = ShapeProxy::from(circle),
 				.proxy_b = input.proxy,
 				.transform_a = Transform::identity,
 				.transform_b = Transform::identity,
@@ -84,16 +70,15 @@ namespace box2dpp
 				.max_fraction = input.max_fraction,
 				.can_encroach = input.can_encroach
 		};
+
 		return test(pair_input);
 	}
 
-	auto ShapeCast::test(const ShapeCastInput& input, const Capsule& capsule) noexcept -> ShapeCast
+	auto ShapeCast::test(const ShapeCastInput& input, const Capsule& capsule) noexcept -> std::optional<ShapeCastOutput>
 	{
-		const Vec2 points[]{capsule.center1, capsule.center2};
-
 		const ShapeCastPairInput pair_input
 		{
-				.proxy_a = ShapeProxy::create({points, 2}, capsule.radius),
+				.proxy_a = ShapeProxy::from(capsule),
 				.proxy_b = input.proxy,
 				.transform_a = Transform::identity,
 				.transform_b = Transform::identity,
@@ -101,14 +86,15 @@ namespace box2dpp
 				.max_fraction = input.max_fraction,
 				.can_encroach = input.can_encroach
 		};
+
 		return test(pair_input);
 	}
 
-	auto ShapeCast::test(const ShapeCastInput& input, const Polygon& polygon) noexcept -> ShapeCast
+	auto ShapeCast::test(const ShapeCastInput& input, const Polygon& polygon) noexcept -> std::optional<ShapeCastOutput>
 	{
 		const ShapeCastPairInput pair_input
 		{
-				.proxy_a = ShapeProxy::create({polygon.vertices, static_cast<std::size_t>(polygon.count)}, polygon.radius),
+				.proxy_a = ShapeProxy::from(polygon),
 				.proxy_b = input.proxy,
 				.transform_a = Transform::identity,
 				.transform_b = Transform::identity,
@@ -116,16 +102,15 @@ namespace box2dpp
 				.max_fraction = input.max_fraction,
 				.can_encroach = input.can_encroach
 		};
+
 		return test(pair_input);
 	}
 
-	auto ShapeCast::test(const ShapeCastInput& input, const Segment& segment) noexcept -> ShapeCast
+	auto ShapeCast::test(const ShapeCastInput& input, const Segment& segment) noexcept -> std::optional<ShapeCastOutput>
 	{
-		const Vec2 points[]{segment.point1, segment.point2};
-
 		const ShapeCastPairInput pair_input
 		{
-				.proxy_a = ShapeProxy::create({points, 2}, 0),
+				.proxy_a = ShapeProxy::from(segment),
 				.proxy_b = input.proxy,
 				.transform_a = Transform::identity,
 				.transform_b = Transform::identity,
@@ -133,91 +118,125 @@ namespace box2dpp
 				.max_fraction = input.max_fraction,
 				.can_encroach = input.can_encroach
 		};
+
 		return test(pair_input);
 	}
 
-	auto ShapeCast::test(const ShapeCastPairInput& input) noexcept -> ShapeCast
+	auto ShapeCast::test(const ShapeCastPairInput& input) noexcept -> std::optional<ShapeCastOutput>
 	{
+		BPP_ASSERT(input.valid());
+
+		if (input.translation_b.length_squared() < std::numeric_limits<float>::epsilon())
+		{
+			// Zero translation, perform static overlap test
+			const DistanceInput distance_input
+			{
+					.proxy_a = input.proxy_a,
+					.proxy_b = input.proxy_b,
+					.transform_a = input.transform_a,
+					.transform_b = input.transform_b,
+					.use_radii = true
+			};
+			if (const auto distance = Distance::compute(distance_input);
+				distance.distance <= 0.0f)
+			{
+				return ShapeCastOutput{.normal = Vec2::zero, .point = (distance.point_a + distance.point_b) * 0.5f, .fraction = 0.0f};
+			}
+			return std::nullopt;
+		}
+
 		// Compute tolerance
 		const auto linear_slop = BPP_LINEAR_SLOP;
 		const auto total_radius = input.proxy_a.radius + input.proxy_b.radius;
 		const auto tolerance = linear_slop * .25f;
 
+		const auto delta = input.translation_b;
+
+		// Initial target separation (accounts for shape radii)
 		auto target = std::ranges::max(linear_slop, total_radius - linear_slop);
 		BPP_ASSERT(target > tolerance);
 
 		// Prepare input for distance query
-		SimplexCache cache{.count = 0, .index_a = {}, .index_b = {}};
-		DistanceInput distance_input{.proxy_a = input.proxy_a, .proxy_b = input.proxy_b, .transform_a = input.transform_a, .transform_b = input.transform_b, .use_radii = false};
-
+		DistanceInput distance_input
+		{
+				.proxy_a = input.proxy_a,
+				.proxy_b = input.proxy_b,
+				.transform_a = input.transform_a,
+				.transform_b = input.transform_b,
+				.use_radii = false
+		};
+		auto cache = SimplexCache::zero;
 		float fraction = 0.f;
 
-		const auto delta2 = input.translation_b;
-		ShapeCast result{.normal = Vec2::zero, .point = Vec2::zero, .fraction = 0.f, .iterations = 0, .hit = false};
-
-		for (std::uint32_t iteration = 0, max_iterations = 20; iteration < max_iterations; ++iteration)
+		for (std::uint32_t iteration = 0; iteration < BPP_COLLISION_DISTANCE_MAX_ITERATIONS; ++iteration)
 		{
-			result.iterations += 1;
+			// Compute current distance between shapes
+			const auto distance = Distance::compute(distance_input, cache);
 
-			const auto output = DistanceOutput::compute(distance_input, cache);
-			if (output.distance < target + tolerance)
+			// Check if we're close enough to the target separation
+			if (distance.distance < target + tolerance)
 			{
 				if (iteration == 0)
 				{
-					if (input.can_encroach and output.distance > linear_slop * 2.f)
+					// First iteration - handle initial proximity
+
+					if (input.can_encroach and distance.distance > linear_slop * 2.f)
 					{
-						target = output.distance - linear_slop;
+						// Allow shapes to get slightly closer
+						target = distance.distance - linear_slop;
 					}
 					else
 					{
-						// Initial overlap
-						result.hit = true;
+						// Initial overlap or very close proximity
+						// Compute a representative contact point
 
-						// Compute a common point
-						const auto c1 = multiply_add(output.point_a, input.proxy_a.radius, output.normal);
-						const auto c2 = multiply_add(output.point_b, -input.proxy_b.radius, output.normal);
-						result.point = c1.lerp(c2, .5f);
+						const auto point_a = multiply_add(distance.point_a, input.proxy_a.radius, distance.normal);
+						const auto point_b = multiply_add(distance.point_b, -input.proxy_b.radius, distance.normal);
+						const auto contact_point = (point_a + point_b) * .5f;
 
-						return result;
+						return ShapeCastOutput{.normal = Vec2::zero, .point = contact_point, .fraction = 0};
 					}
 				}
 				else
 				{
-					// Regular hit
-					BPP_ASSERT(output.distance > 0 and output.normal.normalized());
+					// Regular hit during sweep
+					BPP_ASSERT(distance.distance > 0 and distance.normal.normalized());
 
-					result.normal = output.normal;
-					result.point = multiply_add(output.point_a, input.proxy_a.radius, output.normal);
-					result.fraction = fraction;
-					result.hit = true;
+					// Compute contact point on surface of shape A
+					const auto contact_point = multiply_add(distance.point_a, input.proxy_a.radius, distance.normal);
 
-					return result;
+					return ShapeCastOutput{.normal = distance.normal, .point = contact_point, .fraction = fraction};
 				}
 			}
 
-			BPP_ASSERT(output.distance > 0);
-			BPP_ASSERT(output.normal.normalized());
+			BPP_ASSERT(distance.distance > 0);
+			BPP_ASSERT(distance.normal.normalized());
 
-			// Check if shapes are approaching each other
-			const auto denominator = delta2.dot(output.normal);
-			if (denominator >= 0)
+			// Check if shapes are moving apart
+			const float approach_speed = delta.dot(distance.normal);
+			if (approach_speed >= 0)
 			{
-				// Miss
-				return result;
+				// Shapes are moving apart or parallel, no collision
+				return std::nullopt;
 			}
 
-			// Advance sweep
-			fraction += (target - output.distance) / denominator;
+			// Compute required movement to reach target separation
+			const float required_movement = (target - distance.distance) / approach_speed;
+			BPP_ASSERT(required_movement > 0);
+
+			// Advance the sweep
+			fraction += required_movement;
 			if (fraction >= input.max_fraction)
 			{
-				// Miss
-				return result;
+				// Would collide beyond max_fraction
+				return std::nullopt;
 			}
 
-			distance_input.transform_b.point = multiply_add(input.transform_b.point, fraction, delta2);
+			// Update transform for next iteration
+			distance_input.transform_b.point = multiply_add(input.transform_b.point, fraction, delta);
 		}
 
-		// Failure!
-		return result;
+		// Algorithm failed to converge or max iterations exceeded
+		return std::nullopt;
 	}
 }

@@ -19,24 +19,38 @@
 
 namespace box2dpp
 {
+	namespace
+	{
+		[[nodiscard]] auto make_initial_overlap(const RayCastInput& input) noexcept -> RayCastOutput
+		{
+			return {.normal = Vec2::zero, .point = input.origin, .fraction = 0.f};
+		}
+	}
+
 	auto RayCastInput::valid() const noexcept -> bool
 	{
-		return
-				origin.valid() and
-				translation.valid() and
-				box2dpp::valid(max_fraction) and max_fraction >= 0.f and max_fraction < BPP_HUGE;
+		if (not origin.valid())
+		{
+			return false;
+		}
+
+		if (not translation.valid())
+		{
+			return false;
+		}
+
+		if (not box2dpp::valid(max_fraction) or max_fraction < 0 or max_fraction > 1)
+		{
+			return false;
+		}
+
+		return true;
 	}
 
-	auto RayCast::from(const ShapeCast& result) noexcept -> RayCast
-	{
-		static_assert(sizeof(RayCast) == sizeof(ShapeCast));
-
-		return {.normal = result.normal, .point = result.point, .fraction = result.fraction, .iterations = result.iterations, .hit = result.hit};
-	}
-
-	auto RayCast::test(const RayCastInput& input, const Circle& circle) noexcept -> RayCast
+	auto RayCast::test(const RayCastInput& input, const Circle& circle) noexcept -> std::optional<RayCastOutput>
 	{
 		BPP_ASSERT(input.valid());
+		BPP_ASSERT(circle.valid());
 
 		// Shift ray so circle center is the origin
 		const auto s = input.origin - circle.center;
@@ -46,60 +60,64 @@ namespace box2dpp
 
 		float length;
 		const auto d = input.translation.normalize(length);
-		if (length == 0) // NOLINT(clang-diagnostic-float-equal)
+
+		// Zero length ray
+		if (length < std::numeric_limits<float>::epsilon())
 		{
-			// zero length ray
+			// Check if origin is inside circle
 			if (s.length_squared() < r2)
 			{
-				// initial overlap
-				return {.normal = Vec2::zero, .point = input.origin, .fraction = 0.f, .iterations = 0, .hit = true};
+				return make_initial_overlap(input);
 			}
 
-			return miss;
+			return std::nullopt;
 		}
 
-		// Find the closest point on ray to origin
-
-		// solve: dot(s + t * d, d) = 0
+		// Find the closest point on infinite ray to circle center
+		// Project vector s onto ray direction d
 		const auto t = -s.dot(d);
 
-		// c is the closest point on the line to the origin
+		// Closest point on infinite ray to circle center: s + t * d
 		const auto c = multiply_add(s, t, d);
 		const auto c2 = c.dot(c);
 
+		// If closest point is outside circle, no intersection
 		if (c2 > r2)
 		{
-			// closest point is outside the circle
-			return miss;
+			return std::nullopt;
 		}
 
-		// Pythagoras
+		// Distance from the closest point to circle along ray direction
 		const auto h = std::sqrt(r2 - c2);
-		const auto fraction = t - h;
+		// First intersection point (entering the circle)
+		const auto distance = t - h;
+		// Convert to fraction of ray length
+		const auto fraction = distance / length;
 
-		if (fraction < 0 or input.max_fraction * length < fraction)
+		// Check if intersection is within ray segment
+		if (fraction < 0 or fraction > input.max_fraction)
 		{
-			// intersection is point outside the range of the ray segment
-
+			// Check for initial overlap
 			if (s.length_squared() < r2)
 			{
-				// initial overlap
-				return {.normal = Vec2::zero, .point = input.origin, .fraction = 0.f, .iterations = 0, .hit = true};
+				return make_initial_overlap(input);
 			}
 
-			return miss;
+			return std::nullopt;
 		}
 
 		// hit point relative to center
-		const auto hit_point = multiply_add(s, fraction, d);
+		const auto hit_point = multiply_add(s, distance, d);
 		const auto normal = hit_point.normalize();
+		const auto point = multiply_add(circle.center, circle.radius, normal);
 
-		return {.normal = normal, .point = multiply_add(circle.center, circle.radius, normal), .fraction = fraction / length, .iterations = 0, .hit = true};
+		return RayCastOutput{.normal = normal, .point = point, .fraction = fraction};
 	}
 
-	auto RayCast::test(const RayCastInput& input, const Capsule& capsule) noexcept -> RayCast
+	auto RayCast::test(const RayCastInput& input, const Capsule& capsule) noexcept -> std::optional<RayCastOutput>
 	{
 		BPP_ASSERT(input.valid());
+		BPP_ASSERT(capsule.valid());
 
 		const auto v1 = capsule.center1;
 		const auto v2 = capsule.center2;
@@ -144,8 +162,8 @@ namespace box2dpp
 				return test(input, circle);
 			}
 
-			// ray starts inside capsule -> no hit
-			return {.normal = Vec2::zero, .point = input.origin, .fraction = 0, .iterations = 0, .hit = true};
+			// ray starts inside capsule
+			return make_initial_overlap(input);
 		}
 
 		// Perpendicular to capsule axis, pointing right
@@ -165,10 +183,10 @@ namespace box2dpp
 
 		// Cramer's rule [a -u]
 		const auto den = a.cross(-u);
-		if (-std::numeric_limits<float>::epsilon() < den and den < std::numeric_limits<float>::epsilon())
+		if (std::abs(den) < std::numeric_limits<float>::epsilon())
 		{
 			// Ray is parallel to capsule and outside infinite length capsule
-			return miss;
+			return std::nullopt;
 		}
 
 		const auto b1 = multiply_sub(q, r, n);
@@ -201,7 +219,7 @@ namespace box2dpp
 
 		if (s2 < 0 or s2 > input.max_fraction * ray_length)
 		{
-			return miss;
+			return std::nullopt;
 		}
 
 		// Cramer's rule [b -u]
@@ -220,12 +238,16 @@ namespace box2dpp
 		}
 
 		// ray hits capsule side
-		return {.normal = n, .point = v1.lerp(v2, s1 / capsule_length) + r * n, .fraction = s2 / ray_length, .iterations = 0, .hit = true};
+		const auto point = multiply_add(v1.lerp(v2, s1 / capsule_length), r, n);
+		const auto fraction = s2 / ray_length;
+
+		return RayCastOutput{.normal = n, .point = point, .fraction = fraction};
 	}
 
-	auto RayCast::test(const RayCastInput& input, const Polygon& polygon) noexcept -> RayCast
+	auto RayCast::test(const RayCastInput& input, const Polygon& polygon) noexcept -> std::optional<RayCastOutput>
 	{
 		BPP_ASSERT(input.valid());
+		BPP_ASSERT(polygon.count >= 3);
 
 		if (polygon.radius == 0) // NOLINT(clang-diagnostic-float-equal)
 		{
@@ -251,12 +273,12 @@ namespace box2dpp
 				const auto numerator = edge_normal.dot(vertex - p1);
 				const auto denominator = edge_normal.dot(d);
 
-				if (denominator == 0) // NOLINT(clang-diagnostic-float-equal)
+				if (std::abs(denominator) < std::numeric_limits<float>::epsilon())
 				{
 					// Parallel and runs outside edge
 					if (numerator < 0)
 					{
-						return miss;
+						return std::nullopt;
 					}
 				}
 				else
@@ -283,7 +305,7 @@ namespace box2dpp
 				if (upper < lower)
 				{
 					// Ray misses
-					return miss;
+					return std::nullopt;
 				}
 			}
 
@@ -291,29 +313,41 @@ namespace box2dpp
 
 			if (index == std::numeric_limits<std::uint32_t>::max())
 			{
-				// initial overlap
-				return {.normal = Vec2::zero, .point = input.origin, .fraction = 0, .iterations = 0, .hit = true};
+				return make_initial_overlap(input);
 			}
 
-			return {.normal = polygon.normals[index], .point = multiply_add(input.origin, lower, d), .fraction = lower, .iterations = 0, .hit = true};
+			const auto normal = polygon.normals[index];
+			const auto point = multiply_add(input.origin, lower, d);
+			const auto fraction = lower;
+
+			return RayCastOutput{.normal = normal, .point = point, .fraction = fraction};
 		}
 
 		const ShapeCastPairInput pair_input
 		{
-				.proxy_a = ShapeProxy::create({polygon.vertices, polygon.count}, polygon.radius),
-				.proxy_b = ShapeProxy::create({&input.origin, 1}, 0),
+				.proxy_a = ShapeProxy::from({polygon.vertices.data(), polygon.count}, polygon.radius),
+				.proxy_b = ShapeProxy::from({&input.origin, 1}, 0),
 				.transform_a = Transform::identity,
 				.transform_b = Transform::identity,
 				.translation_b = input.translation,
 				.max_fraction = input.max_fraction,
 				.can_encroach = false
 		};
-		return from(ShapeCast::test(pair_input));
+
+		if (const auto output = ShapeCast::test(pair_input);
+			output.has_value())
+		{
+			const auto& o = *output;
+			return RayCastOutput{.normal = o.normal, .point = o.point, .fraction = o.fraction};
+		}
+
+		return std::nullopt;
 	}
 
-	auto RayCast::test(const RayCastInput& input, const Segment& segment, const bool one_sided) noexcept -> RayCast
+	auto RayCast::test(const RayCastInput& input, const Segment& segment, const bool one_sided) noexcept -> std::optional<RayCastOutput>
 	{
 		BPP_ASSERT(input.valid());
+		BPP_ASSERT(segment.valid());
 
 		if (one_sided)
 		{
@@ -321,7 +355,7 @@ namespace box2dpp
 			if (const auto offset = (input.origin - segment.point1).cross(segment.point2 - segment.point1);
 				offset < 0)
 			{
-				return miss;
+				return std::nullopt;
 			}
 		}
 
@@ -335,9 +369,9 @@ namespace box2dpp
 
 		float length;
 		const auto e_normalized = e.normalize(length);
-		if (length == 0) // NOLINT(clang-diagnostic-float-equal)
+		if (length < std::numeric_limits<float>::epsilon())
 		{
-			return miss;
+			return std::nullopt;
 		}
 
 		// Normal points to the right, looking from v1 towards v2
@@ -351,17 +385,17 @@ namespace box2dpp
 		const auto numerator = normal.dot(v1 - p1);
 		const auto denominator = normal.dot(d);
 
-		if (denominator == 0) // NOLINT(clang-diagnostic-float-equal)
+		if (std::abs(denominator) < std::numeric_limits<float>::epsilon())
 		{
 			// parallel
-			return miss;
+			return std::nullopt;
 		}
 
 		const auto t = numerator / denominator;
 		if (t < 0 or t > input.max_fraction)
 		{
 			// out of ray range
-			return miss;
+			return std::nullopt;
 		}
 
 		// Intersection point on infinite segment
@@ -374,7 +408,7 @@ namespace box2dpp
 		if (s < 0 or s > length)
 		{
 			// out of segment range
-			return miss;
+			return std::nullopt;
 		}
 
 		if (numerator > 0)
@@ -382,6 +416,6 @@ namespace box2dpp
 			normal = -normal;
 		}
 
-		return {.normal = normal, .point = p, .fraction = t, .iterations = 0, .hit = true};
+		return RayCastOutput{.normal = normal, .point = p, .fraction = t};
 	}
 }

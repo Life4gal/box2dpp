@@ -5,10 +5,7 @@
 
 #pragma once
 
-#include <box2dpp/math/transform.hpp>
-
 #include <box2dpp/collision/simplex.hpp>
-#include <box2dpp/collision/shape_cast.hpp>
 
 namespace box2dpp
 {
@@ -31,34 +28,28 @@ namespace box2dpp
 		bool use_radii;
 	};
 
-	class DistanceOutput final
+	class Distance final
 	{
 	public:
-		/// Closest point on shape A
+		/// Closest point on shape A in world coordinates
 		Vec2 point_a;
 
-		/// Closest point on shape B
+		/// Closest point on shape B in world coordinates  
 		Vec2 point_b;
 
-		/// Normal vector that points from A to B. Invalid if distance is zero.
+		/// Unit normal pointing from A to B.
+		/// Only valid when separated (distance > 0).
 		Vec2 normal;
 
-		/// The final distance, zero if overlapped
+		/// Signed distance between shapes.
+		/// Positive when separated, zero when touching, negative when overlapping.
 		float distance;
-
-		/// Number of GJK iterations used
-		std::uint32_t iterations;
-
-		/// The number of simplexes stored in the simplex array
-		std::uint32_t simplex_count;
 
 		/// Compute the closest points between two shapes represented as point clouds.
 		/// SimplexCache cache is input/output. On the first call set SimplexCache::count to zero.
-		/// The underlying GJK algorithm may be debugged by passing in debug simplexes and capacity. 
-		[[nodiscard]] static auto compute(const DistanceInput& input, SimplexCache& inout_cache, [[maybe_unused]] std::span<Simplex> debug_simplexes = {}) noexcept -> DistanceOutput;
+		[[nodiscard]] static auto compute(const DistanceInput& input, SimplexCache& inout_cache) noexcept -> Distance;
 
 		/// Compute the closest points between two shapes represented as point clouds.
-		/// The underlying GJK algorithm may be debugged by passing in debug simplexes and capacity.
-		[[nodiscard]] static auto compute(const DistanceInput& input, [[maybe_unused]] std::span<Simplex> debug_simplexes = {}) noexcept -> DistanceOutput;
+		[[nodiscard]] static auto compute(const DistanceInput& input) noexcept -> Distance;
 	};
 }

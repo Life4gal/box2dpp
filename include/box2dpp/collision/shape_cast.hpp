@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include <span>
+#include <optional>
 
-#include <box2dpp/math.hpp>
+#include <box2dpp/collision/shape_proxy.hpp>
 
 namespace box2dpp
 {
@@ -16,125 +16,112 @@ namespace box2dpp
 	class Polygon;
 	class Segment;
 
-	/// A distance proxy is used by the GJK algorithm. It encapsulates any shape.
-	/// You can provide between 1 and BPP_MAX_POLYGON_VERTICES and a radius.
-	class ShapeProxy final
-	{
-	public:
-		/// The point cloud
-		Vec2 points[BPP_MAX_POLYGON_VERTICES];
-
-		/// The number of points.
-		std::uint32_t count;
-
-		/// The external radius of the point cloud. 
-		/// May be zero.
-		float radius;
-
-		/// Make a proxy for use in overlap, shape cast, and related functions.
-		/// This is a deep copy of the points.
-		[[nodiscard]] static auto create(std::span<const Vec2> points, float radius) noexcept -> ShapeProxy;
-
-		/// Make a proxy with a transform.
-		/// This is a deep copy of the points.
-		[[nodiscard]] static auto create(std::span<const Vec2> points, float radius, const Transform& transform) noexcept -> ShapeProxy;
-
-		/// Make a proxy with a transform.
-		/// This is a deep copy of the points.
-		[[nodiscard]] static auto create(std::span<const Vec2> points, float radius, const Vec2& position, const Rotation& rotation) noexcept -> ShapeProxy;
-
-		[[nodiscard]] auto find_support(const Vec2& direction) const noexcept -> std::uint16_t;
-	};
-
-	/// Low level shape cast input in generic form.
-	/// This allows casting an arbitrary point cloud wrap with a radius.
-	/// For example, a circle is a single point with a non-zero radius.
-	/// A capsule is two points with a non-zero radius. A box is four points with a zero radius.
+	/// Input parameters for casting a generic convex shape along a linear path.
+	/// Used for continuous collision detection (CCD) between moving and static shapes.
 	class ShapeCastInput final
 	{
 	public:
-		/// A generic shape
+		/// Convex shape to cast along the translation vector.
+		/// The shape is defined in its local coordinate frame.
 		ShapeProxy proxy;
 
-		/// The translation of the shape cast
+		/// Linear translation vector for the shape cast.
+		/// Represents the movement from start to end position.
 		Vec2 translation;
 
-		/// The maximum fraction of the translation to consider, typically 1
+		/// Maximum fraction of translation to consider (0 to 1).
+		/// Typically, 1.0 for full translation, can be less for early exit.
 		float max_fraction;
 
-		/// Allow shape cast to encroach when initially touching.
-		/// This only works if the radius is greater than zero.
+		/// Allow slight penetration when shapes are initially touching.
+		/// Only effective when shapes have positive radius (rounded corners).
+		/// This helps prevent tunneling in some edge cases.
 		bool can_encroach;
+
+		[[nodiscard]] auto valid() const noexcept -> bool;
 	};
 
+	/// Input parameters for casting shape B relative to shape A.
+	/// Shape A is fixed, shape B moves by translation_b.
+	/// Both shapes can have arbitrary transforms and radii.
 	class ShapeCastPairInput final
 	{
 	public:
-		/// The proxy for shape A
+		/// Fixed shape (shape A)
 		ShapeProxy proxy_a;
 
-		/// The proxy for shape B
+		/// Moving shape (shape B)
 		ShapeProxy proxy_b;
 
-		/// The world transform for shape A
+		/// World transform for the fixed shape A at time 0
 		Transform transform_a;
 
-		/// The world transform for shape B
+		/// World transform for the moving shape B at time 0
 		Transform transform_b;
 
-		/// The translation of shape B
+		/// Translation vector for shape B from time 0 to time 1
 		Vec2 translation_b;
 
-		/// The fraction of the translation to consider, typically 1
+		/// Maximum fraction of translation to consider (0 to 1)
 		float max_fraction;
 
-		/// Allows shapes with a radius to move slightly closer if already touching
+		/// Allow encroachment when shapes are initially touching
 		bool can_encroach;
+
+		[[nodiscard]] auto valid() const noexcept -> bool;
 	};
 
-	/// Low level shape-cast output data.
-	/// Returns a zero fraction and normal in the case of initial overlap.
-	class ShapeCast final // NOLINT(clang-diagnostic-padded)
+	/// Result of a shape cast operation.
+	/// Contains collision information if a hit occurred during the sweep.
+	class ShapeCastOutput final
 	{
 	public:
-		const static ShapeCast miss;
-
-		/// The surface normal at the hit point
+		/// Surface normal at the hit point (from A to B).
+		/// Zero vector in case of initial overlap.
 		Vec2 normal;
 
-		/// The surface hit point
+		/// Contact point in world coordinates at time of collision.
+		/// For initial overlap, an arbitrary point on the overlapping region.
 		Vec2 point;
 
-		/// The fraction of the input translation at collision
+		/// Fraction of translation at which collision occurs (0 to max_fraction).
+		/// Zero indicates initial overlap, positive indicates time of first contact.
 		float fraction;
-
-		/// The number of iterations used
-		std::uint32_t iterations;
-
-		/// Did the cast hit?
-		bool hit;
-
-		/// Shape cast versus a circle.
-		[[nodiscard]] static auto test(const ShapeCastInput& input, const Circle& circle) noexcept -> ShapeCast;
-
-		/// Shape cast versus a capsule.
-		[[nodiscard]] static auto test(const ShapeCastInput& input, const Capsule& capsule) noexcept -> ShapeCast;
-
-		/// Shape cast versus a convex polygon.
-		[[nodiscard]] static auto test(const ShapeCastInput& input, const Polygon& polygon) noexcept -> ShapeCast;
-
-		/// Shape cast versus a line segment.
-		[[nodiscard]] static auto test(const ShapeCastInput& input, const Segment& segment) noexcept -> ShapeCast;
-
-		/// Perform a linear shape cast of shape B moving and shape A fixed.
-		/// Determines the hit point, normal, and translation fraction.
-		/// Initially touching shapes are treated as a miss.
-		[[nodiscard]] static auto test(const ShapeCastPairInput& input) noexcept -> ShapeCast;
 	};
 
-	// FIXME: error LNK2005
-#ifdef BPP_COMPILER_MSVC
-	inline
-#endif
-	constexpr ShapeCast ShapeCast::miss = {.normal = Vec2::zero, .point = Vec2::zero, .fraction = 0.f, .iterations = 0, .hit = false};
+	/// Continuous collision detection using shape casting (swept test).
+	/// Determines if and when a moving shape collides with a static shape along a linear translation path.
+	class ShapeCast final
+	{
+	public:
+		/// Cast a generic shape against a stationary circle.
+		/// @param input Shape cast parameters for the moving shape
+		/// @param circle Stationary circle to test against
+		/// @return Shape cast result if collision occurred, null otherwise
+		[[nodiscard]] static auto test(const ShapeCastInput& input, const Circle& circle) noexcept -> std::optional<ShapeCastOutput>;
+
+		/// Cast a generic shape against a stationary capsule.
+		/// @param input Shape cast parameters for the moving shape
+		/// @param capsule Stationary capsule to test against
+		/// @return Shape cast result if collision occurred, null otherwise
+		[[nodiscard]] static auto test(const ShapeCastInput& input, const Capsule& capsule) noexcept -> std::optional<ShapeCastOutput>;
+
+		/// Cast a generic shape against a stationary convex polygon.
+		/// @param input Shape cast parameters for the moving shape
+		/// @param polygon Stationary polygon to test against
+		/// @return Shape cast result if collision occurred, null otherwise
+		[[nodiscard]] static auto test(const ShapeCastInput& input, const Polygon& polygon) noexcept -> std::optional<ShapeCastOutput>;
+
+		/// Cast a generic shape against a stationary line segment.
+		/// @param input Shape cast parameters for the moving shape
+		/// @param segment Stationary segment to test against
+		/// @return Shape cast result if collision occurred, null otherwise
+		[[nodiscard]] static auto test(const ShapeCastInput& input, const Segment& segment) noexcept -> std::optional<ShapeCastOutput>;
+
+		/// Perform a shape cast between two arbitrary convex shapes.
+		/// Shape A is fixed, shape B moves by translation_b.
+		/// @param input Pair-wise shape cast parameters
+		/// @return Shape cast result if collision occurred, null otherwise
+		[[nodiscard]] static auto test(const ShapeCastPairInput& input) noexcept -> std::optional<ShapeCastOutput>;
+	};
 }

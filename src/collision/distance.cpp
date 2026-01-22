@@ -8,14 +8,11 @@
 #include <algorithm>
 #include <ranges>
 
-#include <box2dpp/shape/segment.hpp>
-
 namespace box2dpp
 {
-	auto DistanceOutput::compute(const DistanceInput& input, SimplexCache& inout_cache, const std::span<Simplex> debug_simplexes) noexcept -> DistanceOutput
+	auto Distance::compute(const DistanceInput& input, SimplexCache& inout_cache) noexcept -> Distance
 	{
-		BPP_ASSERT(input.proxy_a.count > 0 and input.proxy_b.count > 0);
-		BPP_ASSERT(input.proxy_a.radius >= 0 and input.proxy_b.radius >= 0);
+		BPP_ASSERT(input.proxy_a.valid() and input.proxy_b.valid());
 
 		// Get proxy B in frame A to avoid further transforms in the main loop.
 		// This is still a performance gain at 8 points.
@@ -24,8 +21,8 @@ namespace box2dpp
 			const auto transform = input.transform_a.inv_multiply(input.transform_b);
 
 			std::ranges::transform(
-				std::views::counted(input.proxy_b.points, input.proxy_b.count),
-				local_proxy_b.points,
+				std::views::counted(input.proxy_b.points.data(), input.proxy_b.count),
+				local_proxy_b.points.data(),
 				[&transform](const Vec2& point) noexcept -> Vec2
 				{
 					return transform.transform(point);
@@ -35,90 +32,49 @@ namespace box2dpp
 
 		// Initialize the simplex
 		auto simplex = Simplex::create(inout_cache, input.proxy_a, local_proxy_b);
-		BPP_ASSERT(simplex.count <= 3);
-
-		std::uint32_t simplex_index = 0;
-		if (not debug_simplexes.empty())
-		{
-			debug_simplexes[0] = simplex;
-			simplex_index += 1;
-		}
 
 		auto non_unit_normal = Vec2::zero;
 
 		// Main iteration loop. 
 		// All computations are done in frame A.
-		std::uint32_t iteration = 0;
 		{
-			constexpr std::uint32_t max_iterations = 20;
 			// These store the vertices of the last simplex so that we can check for duplicates and prevent cycling.
-			std::uint16_t save_a[3];
-			std::uint16_t save_b[3];
+			SimplexVertex::index_type save_a[3];
+			SimplexVertex::index_type save_b[3];
 
-			while (iteration < max_iterations)
+			for (std::uint32_t iteration = 0; iteration < BPP_COLLISION_DISTANCE_MAX_ITERATIONS; ++iteration)
 			{
 				// Copy simplex so we can identify duplicates.
-				const auto save_count = simplex.count;
-				for (std::uint32_t i = 0; i < save_count; ++i)
+				for (std::ptrdiff_t i = 0; i < static_cast<std::ptrdiff_t>(simplex.type); ++i)
 				{
-					save_a[i] = simplex.vertices[i].index_a;
-					save_b[i] = simplex.vertices[i].index_b;
+					const auto& vertex = simplex.vertices[i];
+
+					save_a[i] = vertex.index_a;
+					save_b[i] = vertex.index_b;
 				}
 
-				const auto d = [&]() noexcept -> Vec2
-				{
-					switch (simplex.count)
-					{
-						case 1:
-						{
-							return -simplex.vertices[0].w;
-						}
-						case 2:
-						{
-							return simplex.solve2();
-						}
-						case 3:
-						{
-							return simplex.solve3();
-						}
-						default:
-						{
-							BPP_COMPILER_UNREACHABLE();
-						}
-					}
-				}();
+				const auto d = simplex.solve();
 
-				const auto fallback_overlap_result = [&] noexcept -> DistanceOutput
+				const auto fallback_overlap_result = [&] noexcept -> Distance
 				{
 					// Overlap
-					Vec2 local_point_a;
-					Vec2 local_point_b;
-					simplex.compute_witness_points(local_point_a, local_point_b);
+					const auto [local_point_a, local_point_b] = simplex.compute_closest_points();
 
+					// Both points are in frame A, transform to world space
 					return
 					{
 							.point_a = input.transform_a.transform(local_point_a),
-							.point_b = input.transform_b.transform(local_point_b),
+							.point_b = input.transform_a.transform(local_point_b),
 							.normal = Vec2::zero,
 							.distance = 0,
-							.iterations = 0,
-							.simplex_count = 0
 					};
 				};
 
 				// If we have 3 points, then the origin is in the corresponding triangle.
-				if (simplex.count == 3)
+				if (simplex.type == Simplex::Type::TRIANGLE)
 				{
 					return fallback_overlap_result();
 				}
-
-#if BPP_COMPILER_DEBUG
-				if (not debug_simplexes.empty())
-				{
-					debug_simplexes[simplex_index] = simplex;
-					simplex_index += 1;
-				}
-#endif
 
 				// Ensure the search direction is numerically fit.
 				if (d.dot(d) < std::numeric_limits<float>::epsilon() * std::numeric_limits<float>::epsilon())
@@ -138,15 +94,12 @@ namespace box2dpp
 
 				// Compute a tentative new simplex vertex using support points.
 				// support = support(a, d) - support(b, -d)
-				auto& vertex = simplex.vertices[simplex.count];
+				auto& vertex = simplex.vertices[static_cast<std::ptrdiff_t>(simplex.type)];
 				vertex.index_a = input.proxy_a.find_support(d);
 				vertex.w_a = input.proxy_a.points[vertex.index_a];
 				vertex.index_b = local_proxy_b.find_support(-d);
 				vertex.w_b = local_proxy_b.points[vertex.index_b];
 				vertex.w = vertex.w_a - vertex.w_b;
-
-				// Iteration count is equated to the number of support point calls.
-				iteration += 1;
 
 				// Check for duplicate support points. 
 				// This is the main termination criteria.
@@ -167,39 +120,27 @@ namespace box2dpp
 				}
 
 				// New vertex is valid and needed.
-				simplex.count += 1;
+				simplex.type = static_cast<Simplex::Type>(static_cast<std::uint32_t>(simplex.type) + 1);
 			}
 		}
-
-#if BPP_COMPILER_DEBUG
-		if (not debug_simplexes.empty())
-		{
-			debug_simplexes[simplex_index] = simplex;
-			simplex_index += 1;
-		}
-#endif
 
 		// Prepare output
 		auto normal = non_unit_normal.normalize();
 		BPP_ASSERT(normal.normalized());
 		normal = input.transform_a.rotation.rotate(normal);
 
-		Vec2 local_point_a;
-		Vec2 local_point_b;
-		simplex.compute_witness_points(local_point_a, local_point_b);
+		const auto [local_point_a, local_point_b] = simplex.compute_closest_points();
 
-		DistanceOutput result
+		Distance result
 		{
 				.point_a = input.transform_a.transform(local_point_a),
 				.point_b = input.transform_a.transform(local_point_b),
 				.normal = normal,
 				.distance = local_point_a.distance(local_point_b),
-				.iterations = iteration,
-				.simplex_count = simplex_index
 		};
 
 		// Cache the simplex
-		inout_cache = SimplexCache::create(simplex);
+		inout_cache = simplex.cache();
 
 		// Apply radii if requested
 		if (input.use_radii)
@@ -216,9 +157,9 @@ namespace box2dpp
 		return result;
 	}
 
-	auto DistanceOutput::compute(const DistanceInput& input, const std::span<Simplex> debug_simplexes) noexcept -> DistanceOutput
+	auto Distance::compute(const DistanceInput& input) noexcept -> Distance
 	{
-		SimplexCache cache{.count = 0, .index_a = {}, .index_b = {}};
-		return compute(input, cache, debug_simplexes);
+		auto cache = SimplexCache::zero;
+		return compute(input, cache);
 	}
 }
