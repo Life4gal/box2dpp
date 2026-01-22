@@ -225,12 +225,24 @@ static_assert(BPP_MAX_POLYGON_VERTICES >= 3, "Must be 3 or more");
 #define BPP_LINEAR_SLOP .005f * box2dpp::units_count_per_meter
 #endif
 
+// Box2D uses limited speculative collision. 
+// This reduces jitter.
+// Normally this is 2cm.
+// @warning modifying this can have a significant impact on performance and stability
+#ifndef BPP_SPECULATIVE_DISTANCE
+#define BPP_SPECULATIVE_DISTANCE 4.f * BPP_LINEAR_SLOP
+#endif
+
 // This is used to fatten AABBs in the dynamic tree. 
 // This allows proxies to move by a small amount without triggering a tree adjustment. 
 // This is in meters. Normally this is 5cm.
 // @warning modifying this can have a significant impact on performance
 #ifndef BPP_AABB_MARGIN
 #define BPP_AABB_MARGIN .05f * box2dpp::units_count_per_meter
+#endif
+
+#ifndef BPP_COLLISION_DISTANCE_MAX_ITERATIONS
+#define BPP_COLLISION_DISTANCE_MAX_ITERATIONS 20
 #endif
 
 // =========================================================
