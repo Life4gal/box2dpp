@@ -96,11 +96,11 @@ namespace
 					{.x = 0.1001f, .y = 0.1001f},
 			}};
 
-			const auto hull = Hull::create(points);
+			const auto hull = Hull::from(points);
 			expect(hull.valid() == "hull should be valid"_b);
 			expect(hull.count >= 4_u and hull.count <= 6_u) << "hull should have 4-6 vertices";
 
-			const auto empty_hull = Hull::create({});
+			const auto empty_hull = Hull::from({});
 			expect(empty_hull.count == 0_u) << "empty input should produce empty hull";
 
 			constexpr std::array<Vec2, 3> collinear
@@ -110,7 +110,7 @@ namespace
 					{.x = 2, .y = 2},
 			}};
 
-			const auto collinear_hull = Hull::create(collinear);
+			const auto collinear_hull = Hull::from(collinear);
 			expect(collinear_hull.valid() != "collinear points should not produce valid hull"_b);
 		};
 
@@ -196,7 +196,7 @@ namespace
 					}
 				);
 
-				const auto hull = Hull::create({points, n * 2});
+				const auto hull = Hull::from({points, n * 2});
 				const auto ac = Polygon::make(hull, 0);
 				const auto ma = MassData::compute(ac, 1);
 
