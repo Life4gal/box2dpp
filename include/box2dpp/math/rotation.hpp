@@ -40,6 +40,8 @@ namespace box2dpp
 		[[nodiscard]] auto valid_angle() const noexcept -> bool;
 
 	public:
+		[[nodiscard]] constexpr auto operator==(const Rotation& other) const noexcept -> bool = default;
+
 		/// Check if rotation is mathematically valid (finite and normalized)
 		[[nodiscard]] auto valid() const noexcept -> bool;
 

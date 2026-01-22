@@ -21,6 +21,8 @@ namespace box2dpp
 		/// Rotation component (orientation)
 		Rotation rotation;
 
+		[[nodiscard]] constexpr auto operator==(const Transform& other) const noexcept -> bool = default;
+
 		/// Check if transform components are mathematically valid
 		[[nodiscard]] auto valid() const noexcept -> bool;
 
