@@ -23,6 +23,7 @@ namespace
 		"operator-(unary)"_test = [&] noexcept -> void
 		{
 			constexpr auto o = -m_one;
+
 			expect(o.x == value(-m_one.x));
 			expect(o.y == value(-m_one.y));
 		};
@@ -30,6 +31,7 @@ namespace
 		"operator-(vec2)"_test = [&] noexcept -> void
 		{
 			constexpr auto v = zero - two;
+
 			expect(v.x == value(zero.x - two.x));
 			expect(v.y == value(zero.y - two.y));
 		};
@@ -37,6 +39,7 @@ namespace
 		"operator-(scalar)"_test = [&] noexcept -> void
 		{
 			constexpr auto v = one - 2;
+
 			expect(v.x == value(one.x - 2));
 			expect(v.y == value(one.y - 2));
 		};
@@ -44,6 +47,7 @@ namespace
 		"operator+(unary)"_test = [&] noexcept -> void
 		{
 			const auto o = +m_one;
+
 			expect(o.x == value(std::abs(m_one.x)));
 			expect(o.y == value(std::abs(m_one.y)));
 		};
@@ -51,6 +55,7 @@ namespace
 		"operator+(vec2)"_test = [&] noexcept -> void
 		{
 			constexpr auto v = one + two;
+
 			expect(v.x == value(one.x + two.x));
 			expect(v.y == value(one.y + two.y));
 		};
@@ -58,6 +63,7 @@ namespace
 		"operator+(scalar)"_test = [&] noexcept -> void
 		{
 			constexpr auto v = one + 2;
+
 			expect(v.x == value(one.x + 2));
 			expect(v.y == value(one.y + 2));
 		};
@@ -65,6 +71,7 @@ namespace
 		"operator*(vec2)"_test = [&] noexcept -> void
 		{
 			constexpr auto v = one * two;
+
 			expect(v.x == value(one.x * two.x));
 			expect(v.y == value(one.y * two.y));
 		};
@@ -72,6 +79,7 @@ namespace
 		"operator*(scalar)"_test = [&] noexcept -> void
 		{
 			constexpr auto v = one * 2;
+
 			expect(v.x == value(one.x * 2));
 			expect(v.y == value(one.y * 2));
 		};
@@ -79,6 +87,7 @@ namespace
 		"operator/(vec2)"_test = [&] noexcept -> void
 		{
 			constexpr auto v = one / two;
+
 			expect(v.x == value(one.x / two.x));
 			expect(v.y == value(one.y / two.y));
 		};
@@ -86,8 +95,149 @@ namespace
 		"operator/(scalar)"_test = [&] noexcept -> void
 		{
 			constexpr auto v = one / 2;
+
 			expect(v.x == value(one.x / 2));
 			expect(v.y == value(one.y / 2));
+		};
+
+		"normalize.zero"_test = [&] noexcept -> void
+		{
+			constexpr auto v = Vec2{.x = 0.f, .y = 0.f};
+
+			float length;
+			const auto n_normalized = v.normalize(length);
+
+			expect(length == value(0.f));
+			expect(n_normalized.x == value(0.f));
+			expect(n_normalized.y == value(0.f));
+		};
+
+		"normalize.tiny_length"_test = [&] noexcept -> void
+		{
+			constexpr float tiny = std::numeric_limits<float>::denorm_min();
+			constexpr auto v = Vec2{.x = tiny, .y = tiny};
+
+			float length = -1.f;
+			const auto v_normalized = v.normalize(length);
+
+			expect(length >= value(0.f));
+			expect(v_normalized.x == value(0.f));
+			expect(v_normalized.y == value(0.f));
+		};
+
+		"valid.nan/inf"_test = [&] noexcept -> void
+		{
+			const Vec2 v_nan{.x = std::nanf(""), .y = 1.f};
+			constexpr Vec2 v_inf{.x = 1.f, .y = std::numeric_limits<float>::infinity()};
+
+			expect(v_nan.valid() == value(false));
+			expect(v_inf.valid() == value(false));
+		};
+
+		"distance.symmetric"_test = [&] noexcept -> void
+		{
+			constexpr Vec2 a{.x = -3.f, .y = 4.f};
+			constexpr Vec2 b{.x = 7.f, .y = 1.f};
+
+			expect(a.distance(b) == value(b.distance(a)));
+			expect(a.distance_squared(b) == value(b.distance_squared(a)));
+		};
+
+		"lerp.outside_range"_test = [&] noexcept -> void
+		{
+			constexpr Vec2 a{.x = 1.f, .y = 2.f};
+			constexpr Vec2 b{.x = 3.f, .y = 4.f};
+			constexpr float epsilon = std::numeric_limits<float>::epsilon() * 10.f;
+
+			const auto r_neg = a.lerp(b, -1.f);
+			expect(std::abs(r_neg.x - (2.f * a.x - b.x)) <= value(epsilon));
+			expect(std::abs(r_neg.y - (2.f * a.y - b.y)) <= value(epsilon));
+
+			const auto r_big = a.lerp(b, 2.f);
+			expect(std::abs(r_big.x - (2.f * b.x - a.x)) <= value(epsilon));
+			expect(std::abs(r_big.y - (2.f * b.y - a.y)) <= value(epsilon));
+		};
+
+		"combination.min_max"_test = [&] noexcept -> void
+		{
+			constexpr Vec2 a{.x = -1.f, .y = 5.f};
+			constexpr Vec2 b{.x = 2.f, .y = 3.f};
+
+			const auto min = a.combination_min(b);
+			const auto max = a.combination_max(b);
+
+			expect(min.x == value(-1.f));
+			expect(min.y == value(3.f));
+			expect(max.x == value(2.f));
+			expect(max.y == value(5.f));
+		};
+
+		"multiply_add_sub"_test = [&] noexcept -> void
+		{
+			constexpr Vec2 a{.x = 1.f, .y = 2.f};
+			constexpr Vec2 b{.x = 3.f, .y = 4.f};
+
+			constexpr auto add = box2dpp::multiply_add(a, 2.f, b);
+			expect(add.x == value(a.x + 2.f * b.x));
+			expect(add.y == value(a.y + 2.f * b.y));
+
+			constexpr auto sub = box2dpp::multiply_sub(a, 2.f, b);
+			expect(sub.x == value(a.x - 2.f * b.x));
+			expect(sub.y == value(a.y - 2.f * b.y));
+		};
+
+		"abs"_test = [&] noexcept -> void
+		{
+			constexpr Vec2 v{.x = -2.5f, .y = 3.7f};
+			const auto a = v.abs();
+
+			expect(a.x == value(2.5f));
+			expect(a.y == value(3.7f));
+		};
+
+		"reflect"_test = [&] noexcept -> void
+		{
+			constexpr Vec2 v{.x = 1.f, .y = -1.f};
+			constexpr Vec2 normal{.x = 0.f, .y = 1.f};
+
+			const auto reflected = v.reflect(normal);
+			// v' = v - 2*(v·n)*n
+			// v·n = -1, v' = (1, -1) - 2*(-1)*(0,1) = (1, -1) + (0,2) = (1,1)
+
+			expect(std::abs(reflected.x - 1.f) <= value(1e-5f));
+			expect(std::abs(reflected.y - 1.f) <= value(1e-5f));
+		};
+
+		"project"_test = [] noexcept -> void
+		{
+			constexpr Vec2 v{.x = 3.f, .y = 4.f};
+			constexpr Vec2 onto{.x = 1.f, .y = 0.f}; // x-axis
+
+			const auto proj = v.project(onto);
+
+			expect(std::abs(proj.x - 3.f) <= value(1e-5f));
+			expect(std::abs(proj.y) <= value(1e-5f));
+
+			constexpr Vec2 zero{.x = 0.f, .y = 0.f};
+			const auto proj_zero = v.project(zero);
+
+			expect(proj_zero.x == value(0.f));
+			expect(proj_zero.y == value(0.f));
+		};
+
+		"reject"_test = [] noexcept -> void
+		{
+			constexpr Vec2 v{.x = 3.f, .y = 4.f};
+			constexpr Vec2 onto{.x = 1.f, .y = 0.f}; // x-axis
+
+			const auto proj = v.project(onto);
+			const auto rej = v.reject(onto);
+
+			const auto sum = proj + rej;
+
+			expect(std::abs(sum.x - v.x) <= value(1e-5f));
+			expect(std::abs(sum.y - v.y) <= value(1e-5f));
+			expect(std::abs(proj.dot(rej)) <= value(1e-5f));
 		};
 	};
 
@@ -309,6 +459,247 @@ namespace
 			}
 		};
 
+		"normalize.denormalized"_test = [] noexcept -> void
+		{
+			// sqrt(0.5) ≈ 0.707
+			constexpr Rotation r{.cos = 0.5f, .sin = 0.5f};
+			const auto nr = r.normalize();
+
+			expect(nr.normalized() == "normalized"_b);
+			expect(std::abs(nr.cos * nr.cos + nr.sin * nr.sin - 1.f) <= value(1e-6f));
+		};
+
+		"unwind_angle.large_values"_test = [] noexcept -> void
+		{
+			constexpr auto two_pi = std::numbers::pi_v<float> * 2.f;
+
+			const auto r1 = box2dpp::unwind_angle(1000.f * two_pi + 1.23f);
+			const auto r2 = box2dpp::unwind_angle(-1000.f * two_pi - 2.34f);
+
+			expect(r1 >= value(-std::numbers::pi_v<float>));
+			expect(r1 <= value(std::numbers::pi_v<float>));
+			expect(r2 >= value(-std::numbers::pi_v<float>));
+			expect(r2 <= value(std::numbers::pi_v<float>));
+		};
+
+		"from.angle_boundaries"_test = [] noexcept -> void
+		{
+			constexpr auto tolerance = .002f;
+
+			const auto r_pi = Rotation::from(std::numbers::pi_v<float>);
+			const auto r_npi = Rotation::from(-std::numbers::pi_v<float>);
+			const auto r_half = Rotation::from(std::numbers::pi_v<float> / 2.f);
+
+			expect(std::abs(r_pi.cos - std::cos(std::numbers::pi_v<float>)) <= value(tolerance));
+			expect(std::abs(r_pi.sin - std::sin(std::numbers::pi_v<float>)) <= value(tolerance));
+			expect(std::abs(r_npi.cos - std::cos(-std::numbers::pi_v<float>)) <= value(tolerance));
+			expect(std::abs(r_npi.sin - std::sin(-std::numbers::pi_v<float>)) <= value(tolerance));
+			expect(std::abs(r_half.cos - std::cos(std::numbers::pi_v<float> / 2.f)) <= value(tolerance));
+			expect(std::abs(r_half.sin - std::sin(std::numbers::pi_v<float> / 2.f)) <= value(tolerance));
+		};
+
+		"from.large_angles"_test = [] noexcept -> void
+		{
+			constexpr auto huge = 10000.f * std::numbers::pi_v<float>;
+			const auto r = Rotation::from(huge);
+
+			expect(r.valid() == "valid rotation"_b);
+
+			const auto angle = r.angle();
+
+			expect(angle >= value(-std::numbers::pi_v<float>));
+			expect(angle <= value(std::numbers::pi_v<float>));
+		};
+
+		"angle.zero_vector"_test = [] noexcept -> void
+		{
+			constexpr Rotation r{.cos = 0.f, .sin = 0.f};
+
+			expect(r.angle() == value(0.f));
+		};
+
+		"angle.near_boundaries"_test = [] noexcept -> void
+		{
+			constexpr auto angle_near_pi = std::numbers::pi_v<float> - 1e-5f;
+			constexpr auto angle_near_minus_pi = -std::numbers::pi_v<float> + 1e-5f;
+
+			const auto r1 = Rotation::from(angle_near_pi);
+			const auto r2 = Rotation::from(angle_near_minus_pi);
+
+			expect(std::abs(r1.angle() - angle_near_pi) <= value(1e-4f));
+			expect(std::abs(r2.angle() - angle_near_minus_pi) <= value(1e-4f));
+		};
+
+		"angle.precision_comparison"_test = [] noexcept -> void
+		{
+			constexpr int num_samples = 1000;
+
+			for (int i = 0; i < num_samples; ++i)
+			{
+				const float angle = -std::numbers::pi_v<float> + (2.f * std::numbers::pi_v<float> * i) / (num_samples - 1);
+
+				const auto r = Rotation::from(angle);
+				const auto approx_angle = r.angle();
+				const auto std_angle = std::atan2(r.sin, r.cos);
+
+				const auto diff = std::abs(box2dpp::unwind_angle(approx_angle - std_angle));
+				expect(diff <= value(ATAN_TOLERANCE * 2.f));
+			}
+		};
+
+		"axis.orthogonality"_test = [] noexcept -> void
+		{
+			const auto r = Rotation::from(std::numbers::pi_v<float> / 3.f);
+			const auto ax = r.axis_x();
+			const auto ay = r.axis_y();
+
+			// dot(ax, ay) == 0
+			expect(std::abs(ax.dot(ay)) <= value(std::numeric_limits<float>::epsilon() * 8.f));
+		};
+
+		"integrate.zero_delta"_test = [] noexcept -> void
+		{
+			const auto r = Rotation::from(1.0f);
+			const auto r2 = r.integrate(0.0f);
+
+			expect(std::abs(r2.cos - r.cos) <= value(std::numeric_limits<float>::epsilon() * 10.f));
+			expect(std::abs(r2.sin - r.sin) <= value(std::numeric_limits<float>::epsilon() * 10.f));
+		};
+
+		"integrate.delta"_test = [] noexcept -> void
+		{
+			const auto r0 = Rotation::from(0.f);
+			const auto r1 = r0.integrate(0.1f);
+
+			// approximately a rotation by 0.1 radians
+			expect(std::abs(box2dpp::unwind_angle(r1.angle() - 0.1f)) <= value(1e-3f));
+		};
+
+		"integrate.large_delta"_test = [] noexcept -> void
+		{
+			const auto r = Rotation::from(0.0f);
+			constexpr auto large_delta = 100.f * std::numbers::pi_v<float>;
+
+			const auto r2 = r.integrate(large_delta);
+			expect(r2.valid() == "valid rotation"_b);
+
+			const auto angle = r2.angle();
+			expect(angle >= value(-std::numbers::pi_v<float>));
+			expect(angle <= value(std::numbers::pi_v<float>));
+		};
+
+		"nlerp.opposite_directions"_test = [] noexcept -> void
+		{
+			const auto r1 = Rotation::from(0.0f);
+			const auto r2 = Rotation::from(std::numbers::pi_v<float>);
+
+			const auto mid = r1.nlerp(r2, 0.5f);
+			expect(mid.valid() == "valid rotation"_b);
+
+			expect(std::abs(mid.cos) <= value(1e-5f));
+			expect(std::abs(std::abs(mid.sin) - 1.f) <= value(1e-5f));
+		};
+
+		"nlerp.extremes"_test = [] noexcept -> void
+		{
+			const auto r1 = Rotation::from(0.0f);
+			const auto r2 = Rotation::from(std::numbers::pi_v<float>);
+
+			const auto r_t0 = r1.nlerp(r2, 0.0f);
+			expect(std::abs(r_t0.angle() - r1.angle()) <= value(1e-5f));
+
+			const auto r_t1 = r1.nlerp(r2, 1.0f);
+			const auto diff = std::abs(r_t1.angle() - r2.angle());
+			const auto circular_diff = std::min(diff, std::numbers::pi_v<float> * 2.f - diff);
+
+			expect(circular_diff <= value(1e-5f));
+		};
+
+		"nlerp.out_of_bounds_t"_test = [] noexcept -> void
+		{
+			constexpr auto r0 = Rotation::identity;
+			const auto r90 = Rotation::from(std::numbers::pi_v<float> / 2.f);
+
+			// t < 0
+			const auto r_neg = r0.nlerp(r90, -0.5f);
+			// expect normalized vector pointing opposite direction than simple extrapolation, just verify valid
+			expect(r_neg.valid() == "valid angle"_b);
+
+			// t > 1
+			const auto r_big = r0.nlerp(r90, 1.5f);
+			expect(r_big.valid() == "valid angle"_b);
+		};
+
+		"inv_rotate.inverse"_test = [] noexcept -> void
+		{
+			constexpr Vec2 v{.x = 2.f, .y = -3.f};
+
+			const auto r = Rotation::from(std::numbers::pi_v<float> / 4.f);
+			const auto rv = r.rotate(v);
+			const auto inv = r.inv_rotate(rv);
+
+			expect(std::abs(inv.x - v.x) <= value(std::numeric_limits<float>::epsilon() * 8.f));
+			expect(std::abs(inv.y - v.y) <= value(std::numeric_limits<float>::epsilon() * 8.f));
+		};
+
+		"multiply.associativity"_test = [] noexcept -> void
+		{
+			const auto a = Rotation::from(0.3f);
+			const auto b = Rotation::from(-1.1f);
+			const auto c = Rotation::from(2.0f);
+
+			const auto left = a.multiply(b).multiply(c);
+			const auto right = a.multiply(b.multiply(c));
+
+			expect(std::abs(left.angle() - right.angle()) <= value(1e-5f));
+		};
+
+		"multiply.inverse"_test = [] noexcept -> void
+		{
+			const auto r = Rotation::from(1.5f);
+			constexpr auto id = Rotation::identity;
+
+			// r⁻¹ × r = identity
+			const auto inv_r = r.inv();
+			const auto should_be_id = inv_r.multiply(r);
+
+			expect(std::abs(should_be_id.cos - id.cos) <= value(1e-5f));
+			expect(std::abs(should_be_id.sin - id.sin) <= value(1e-5f));
+
+			// r × r⁻¹ = identity
+			const auto should_also_be_id = r.multiply(inv_r);
+			expect(std::abs(should_also_be_id.cos - id.cos) <= value(1e-5f));
+			expect(std::abs(should_also_be_id.sin - id.sin) <= value(1e-5f));
+		};
+
+		"multiply_by_inverse"_test = [] noexcept -> void
+		{
+			const auto a = Rotation::from(0.3f);
+			const auto b = Rotation::from(-1.1f);
+
+			// a⁻¹ × b
+			const auto m = a.multiply_by_inv(b);
+
+			// a × m = b
+			const auto a_times_m = a.multiply(m);
+			const auto angle_diff = std::abs(box2dpp::unwind_angle(a_times_m.angle() - b.angle()));
+			expect(angle_diff <= value(1e-5f));
+		};
+
+		"inv_multiply"_test = [] noexcept -> void
+		{
+			const auto a = Rotation::from(0.3f);
+			const auto b = Rotation::from(-1.1f);
+
+			// b × a⁻¹
+			const auto m = a.inv_multiply(b);
+
+			//m × a = b
+			const auto m_times_a = m.multiply(a);
+			const auto angle_diff = std::abs(box2dpp::unwind_angle(m_times_a.angle() - b.angle()));
+			expect(angle_diff <= value(1e-5f));
+		};
+
 		get_config().report_level = old_report_level;
 	};
 
@@ -345,6 +736,121 @@ namespace
 				expect(u.x - v.x <= value(std::numeric_limits<float>::epsilon() * 10.f));
 				expect(u.y - v.y <= value(std::numeric_limits<float>::epsilon() * 10.f));
 			};
+		};
+
+		"transform_vector"_test = [] noexcept -> void
+		{
+			const Transform t{.point = {.x = 5.f, .y = -3.f}, .rotation = Rotation::from(0.7f)};
+			constexpr Vec2 v{.x = 2.f, .y = 1.f};
+
+			const auto tv = t.transform_vector(v);
+			const auto expected = t.rotation.rotate(v);
+
+			expect(std::abs(tv.x - expected.x) <= value(1e-5f));
+			expect(std::abs(tv.y - expected.y) <= value(1e-5f));
+
+			const auto itv = t.inv_transform_vector(tv);
+			expect(std::abs(itv.x - v.x) <= value(1e-5f));
+			expect(std::abs(itv.y - v.y) <= value(1e-5f));
+		};
+
+		"identity"_test = [] noexcept -> void
+		{
+			constexpr auto p = Vec2{.x = 5.f, .y = -7.f};
+			constexpr auto id = Transform::identity;
+			const auto tp = id.transform(p);
+
+			expect(std::abs(tp.x - p.x) <= value(std::numeric_limits<float>::epsilon() * 8.f));
+			expect(std::abs(tp.y - p.y) <= value(std::numeric_limits<float>::epsilon() * 8.f));
+		};
+
+		"near_identity"_test = [] noexcept -> void
+		{
+			constexpr Transform t{.point = {.x = 1e-10f, .y = -1e-10f}, .rotation = Rotation{.cos = 1.0f - 1e-10f, .sin = 1e-10f}};
+			constexpr Vec2 v{.x = 1.0f, .y = 2.0f};
+
+			const auto tv = t.transform(v);
+			const auto itv = t.inv_transform(tv);
+
+			expect(std::abs(itv.x - v.x) <= value(1e-5f));
+			expect(std::abs(itv.y - v.y) <= value(1e-5f));
+		};
+
+		"large_translation_inverse_consistency"_test = [] noexcept -> void
+		{
+			const Transform t{.point = {.x = 1e4f, .y = -1e4f}, .rotation = Rotation::from(0.1f)};
+
+			constexpr std::array<Vec2, 5> test_points
+			{{
+
+					{.x = 0.f, .y = 0.f},
+					{.x = 1.f, .y = 2.f},
+					{.x = -3.f, .y = 5.f},
+					{.x = 100.f, .y = -200.f},
+					{.x = 0.001f, .y = -0.002f},
+			}};
+
+			for (const auto& v: test_points)
+			{
+				const auto tv = t.transform(v);
+				const auto itv = t.inv_transform(tv);
+
+				const auto error = (itv - v).length();
+				constexpr float max_allowed_error = 1e-3f;
+
+				expect(error <= value(max_allowed_error));
+			}
+		};
+
+		"multiply.associativity"_test = [] noexcept -> void
+		{
+			const Transform transform_a{.point = {.x = 1.f, .y = 0.5f}, .rotation = Rotation::from(0.2f)};
+			const Transform transform_b{.point = {.x = -0.7f, .y = 2.3f}, .rotation = Rotation::from(1.1f)};
+			const Transform transform_c{.point = {.x = 0.3f, .y = -4.4f}, .rotation = Rotation::from(-0.6f)};
+
+			const auto left = transform_a.multiply(transform_b).multiply(transform_c);
+			const auto right = transform_a.multiply(transform_b.multiply(transform_c));
+
+			constexpr auto p = Vec2{.x = 0.9f, .y = -1.2f};
+			const auto lp = left.transform(p);
+			const auto rp = right.transform(p);
+
+			expect(std::abs(lp.x - rp.x) <= value(std::numeric_limits<float>::epsilon() * 100.f));
+			expect(std::abs(lp.y - rp.y) <= value(std::numeric_limits<float>::epsilon() * 100.f));
+		};
+
+		"multiply_by_inverse.transform"_test = [] noexcept -> void
+		{
+			const Transform transform_a{.point = {.x = 1.f, .y = 2.f}, .rotation = Rotation::from(0.5f)};
+			const Transform transform_b{.point = {.x = -3.f, .y = 0.7f}, .rotation = Rotation::from(-0.8f)};
+
+			// a⁻¹ × b
+			const auto relative = transform_a.multiply_by_inv(transform_b);
+
+			// a × relative = b
+			const auto a_times_relative = transform_a.multiply(relative);
+			const auto pos_diff = (a_times_relative.point - transform_b.point).length();
+			const auto rot_diff = std::abs(box2dpp::unwind_angle(a_times_relative.rotation.angle() - transform_b.rotation.angle()));
+
+			expect(pos_diff <= value(1e-5f));
+			expect(rot_diff <= value(1e-5f));
+		};
+
+		"inv_multiply.transform"_test = [] noexcept -> void
+		{
+			const Transform transform_a{.point = {.x = 1.f, .y = 2.f}, .rotation = Rotation::from(0.5f)};
+			const Transform transform_b{.point = {.x = -3.f, .y = 0.7f}, .rotation = Rotation::from(-0.8f)};
+
+			// b × a⁻¹
+			const auto relative = transform_a.inv_multiply(transform_b);
+
+			// relative × a = b
+			const auto relative_multiply_a = relative.multiply(transform_a);
+			const auto pos_diff = (relative_multiply_a.point - transform_b.point).length();
+			const auto rot_diff = std::abs(box2dpp::unwind_angle(relative_multiply_a.rotation.angle() - transform_b.rotation.angle()));
+
+			expect(pos_diff <= value(1e-5f));
+			expect(rot_diff <= value(1e-5f));
 		};
 	};
 }
