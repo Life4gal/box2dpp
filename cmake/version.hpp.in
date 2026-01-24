@@ -245,6 +245,46 @@ static_assert(BPP_MAX_POLYGON_VERTICES >= 3, "Must be 3 or more");
 #define BPP_COLLISION_DISTANCE_MAX_ITERATIONS 20
 #endif
 
+// =======================
+// DESC
+// =======================
+
+#ifndef BPP_DESC_FILTER_CATEGORY_TYPE
+#define BPP_DESC_FILTER_CATEGORY_TYPE std::uint64_t
+#endif
+
+#ifndef BPP_DESC_FILTER_DEFAULT_CATEGORY
+#define BPP_DESC_FILTER_DEFAULT_CATEGORY BPP_DESC_FILTER_CATEGORY_TYPE{1}
+#endif
+
+#ifndef BPP_DESC_FILTER_DEFAULT_CATEGORY_MASK
+#define BPP_DESC_FILTER_DEFAULT_CATEGORY_MASK std::numeric_limits<BPP_DESC_FILTER_CATEGORY_TYPE>::max()
+#endif
+
+#ifndef BPP_DESC_SURFACE_MATERIAL_ID_TYPE
+#define BPP_DESC_SURFACE_MATERIAL_ID_TYPE std::uint64_t
+#endif
+
+#ifndef BPP_DESC_DEFAULT_SURFACE_MATERIAL_ID
+#define BPP_DESC_DEFAULT_SURFACE_MATERIAL_ID BPP_DESC_SURFACE_MATERIAL_ID_TYPE{0}
+#endif
+
+#ifndef BPP_DESC_USER_DATA_DECLARATION
+#define BPP_DESC_USER_DATA_DECLARATION std::uintptr_t user_data;
+#endif
+
+#ifndef BPP_DESC_USER_DATA_DEFINITION
+#define BPP_DESC_USER_DATA_DEFINITION user_data{0},
+#endif
+
+#ifndef BPP_DESC_TASK_CONTEXT_DECLARATION
+#define BPP_DESC_TASK_CONTEXT_DECLARATION std::uintptr_t task_context;
+#endif
+
+#ifndef BPP_DESC_TASK_CONTEXT_DEFINITION
+#define BPP_DESC_TASK_CONTEXT_DEFINITION task_context{0},
+#endif
+
 // =========================================================
 // INTERNAL VARIABLES
 // =========================================================

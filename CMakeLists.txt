@@ -115,7 +115,7 @@ target_compile_features(
 
 set(
 	BPP_PUBLIC_FILES 
-
+	
 	# ==========================
 	# UTILITY
 	# ==========================
@@ -131,7 +131,7 @@ set(
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/math/transform.hpp
 
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/math.hpp
-	
+		
 	# ==========================
 	# SHAPE
 	# ==========================
@@ -150,13 +150,39 @@ set(
 	# COLLISION
 	# ==========================
 
-	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/ray_cast.hpp
-
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/shape_proxy.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/simplex.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/distance.hpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/ray_cast.hpp
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/shape_cast.hpp
 
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision/time_of_impact.hpp
+
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/collision.hpp
+	
+	# ==========================
+	# DESC
+	# ==========================
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc/id.hpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc/world.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc/body.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc/filter.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc/surface.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc/shape.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc/chain.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc/joint.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc/explosion.hpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc.hpp
+
+	# ==========================
+	# MAIN
+	# ==========================
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/box2dpp.hpp
 )
 
 set(
@@ -169,7 +195,7 @@ set(
 	${CMAKE_CURRENT_SOURCE_DIR}/src/math/vec2.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/math/rotation.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/math/transform.cpp
-	
+			
 	# ==========================
 	# SHAPE
 	# ==========================
@@ -186,11 +212,33 @@ set(
 	# COLLISION
 	# ==========================
 
-	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/ray_cast.cpp
-
+	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/shape_proxy.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/simplex.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/distance.cpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/ray_cast.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/shape_cast.cpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/src/collision/time_of_impact.cpp
+
+	# ==========================
+	# DESC
+	# ==========================
+
+	${CMAKE_CURRENT_SOURCE_DIR}/src/desc/world.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/desc/body.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/desc/filter.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/desc/surface.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/desc/shape.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/desc/chain.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/desc/joint.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/desc/explosion.cpp
+
+	# ==========================
+	# MAIN
+	# ==========================
+
+	${CMAKE_CURRENT_SOURCE_DIR}/src/box2dpp.cpp
 )
 
 set_source_files_properties(
