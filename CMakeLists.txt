@@ -179,6 +179,17 @@ set(
 	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/desc.hpp
 
 	# ==========================
+	# EVENT
+	# ==========================
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/event/sensor.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/event/contact.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/event/body.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/event/joint.hpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/include/box2dpp/event.hpp
+
+	# ==========================
 	# MAIN
 	# ==========================
 
